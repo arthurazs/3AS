@@ -1,0 +1,10 @@
+NXST_FLOW reply (xid=0x4):
+ cookie=0x0, duration=21.844s, table=0, n_packets=4, n_bytes=380, hard_timeout=22, idle_age=19, priority=1,ipv6,in_port=2,dl_dst=33:33:00:00:00:16 actions=drop
+ cookie=0x0, duration=21.783s, table=0, n_packets=2, n_bytes=180, hard_timeout=22, idle_age=20, priority=1,ipv6,in_port=1,dl_dst=33:33:00:00:00:16 actions=drop
+ cookie=0x0, duration=21.493s, table=0, n_packets=0, n_bytes=0, hard_timeout=22, idle_age=21, priority=1,ipv6,in_port=2,dl_dst=33:33:ff:dd:16:63 actions=drop
+ cookie=0x0, duration=21.077s, table=0, n_packets=2, n_bytes=140, hard_timeout=22, idle_age=7, priority=1,ipv6,in_port=1,dl_dst=33:33:00:00:00:02 actions=drop
+ cookie=0x0, duration=20.462s, table=0, n_packets=2, n_bytes=140, hard_timeout=22, idle_age=9, priority=1,ipv6,in_port=2,dl_dst=33:33:00:00:00:02 actions=drop
+ cookie=0x0, duration=20.368s, table=0, n_packets=10, n_bytes=2054, hard_timeout=22, idle_age=5, priority=1,ipv6,in_port=2,dl_dst=33:33:00:00:00:fb actions=drop
+ cookie=0x0, duration=20.158s, table=0, n_packets=5, n_bytes=210, hard_timeout=22, idle_age=1, priority=1,arp,in_port=1,dl_dst=ff:ff:ff:ff:ff:ff actions=drop
+ cookie=0x0, duration=11.056s, table=0, n_packets=9, n_bytes=1631, idle_age=11, priority=2,in_port=1,dl_dst=00:00:00:00:00:02,dl_type=0x888e actions=output:2
+ cookie=0x0, duration=22.162s, table=0, n_packets=19, n_bytes=1519, idle_age=11, priority=0 actions=CONTROLLER:65535

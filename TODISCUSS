@@ -1,0 +1,9 @@
+1) Ao invés do hostapd ter um canal seguro com o Controllador, pq não o próprio controlador analisar o pacote de "sucesso"?
+    Talvez isso abriria espaço para uma vulnerabilidade
+        Um host autenticado poderia injetar uma mensagem falsa de sucesso
+        Talvez regras mais especificas evitariam a injeção
+2) Fluxos especificos ou mais gerais?
+    100 origens diferentes indo para o mesmo destino
+        Fluxo especifico geraria 100 packet in
+        Fluxo geral geraria apenas 1 packet in
+            Isso abre espaço para vulnerabilidade?

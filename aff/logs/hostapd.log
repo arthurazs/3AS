@@ -1,0 +1,16 @@
+Configuration file: hostapd.conf
+Using interface h1-eth0 with hwaddr 00:00:00:00:00:01 and ssid ""
+h1-eth0: RADIUS Authentication server 127.0.0.1:1812
+h1-eth0: interface state UNINITIALIZED->ENABLED
+h1-eth0: AP-ENABLED 
+h1-eth0: CTRL-EVENT-EAP-STARTED 00:00:00:00:00:02
+h1-eth0: CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=1
+h1-eth0: CTRL-EVENT-EAP-SUCCESS2 00:00:00:00:00:02
+h1-eth0: AP-STA-CONNECTED 00:00:00:00:00:02
+h1-eth0: STA 00:00:00:00:00:02 RADIUS: starting accounting session F768FF074A91AFB9
+h1-eth0: STA 00:00:00:00:00:02 IEEE 802.1X: authenticated - EAP type: 25 (unknown)
+recv: Network is down
+h1-eth0: AP-STA-DISCONNECTED 00:00:00:00:00:02
+h1-eth0: interface state ENABLED->DISABLED
+h1-eth0: AP-DISABLED 
+h1-eth0: CTRL-EVENT-TERMINATING 
