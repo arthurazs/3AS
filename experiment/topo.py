@@ -22,8 +22,8 @@ class Simple_Topology(Topo):
 
 
 def main():
-    topo = Simple_Topology()
-    mn = Mininet(topo=topo, controller=None)
+    # app.exe > logs/save_to.log 2>&1 &
+    mn = Mininet(topo=Simple_Topology(), controller=None)
     mn.addController(
         'c0', controller=RemoteController, ip='127.0.0.1', port=6653)
     auth, ev, scada, s1, s2 = mn.get('h1', 'h2', 'h3', 's1', 's2')
@@ -48,22 +48,21 @@ def main():
     s1.cmd('tcpdump -i lo -w logs/s1-lo.pcap &')
     scada.cmd('tcpdump -i h3-eth0 -w logs/scada.pcap &')
     mn.start()
-    scada.cmd('ping -c 1 10.0.0.2')
-    auth.cmdPrint(
-        'freeradius -t -xx -l logs/radius.log')
-    auth.cmdPrint(
-        './hostapd hostapd.conf -t '
-        '> logs/hostapd.log 2>&1 &')
 
-    # auth.cmdPrint('python hostapd_socket.py &')
+    scada.cmd('ping -c 1 10.0.0.2')
+
+    auth.cmdPrint('freeradius -t -xx -l logs/radius.log')
+    auth.cmdPrint('./hostapd hostapd.conf -t > logs/hostapd.log 2>&1 &')
+
     scada.cmdPrint(
         'wpa_supplicant -i h3-eth0 -D wired -c scada.conf '
         '-dd -B -f logs/wpa-scada.log')
     ev.cmdPrint(
         'wpa_supplicant -i h2-eth0 -D wired -c ev.conf '
         '-dd -B -f logs/wpa-ev.log')
-    # app.exe > logs/save_to.log 2>&1 &
+
     scada.cmd('ping -c 1 10.0.0.2')
+
     s1.cmdPrint('pkill -2 tcpdump')
     s1.cmdPrint('pkill -2 wpa_supplicant')
     s1.cmdPrint('pkill -2 hostapd')
