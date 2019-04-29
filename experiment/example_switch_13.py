@@ -20,6 +20,8 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
+from ryu.lib import hub
+from hostapd_socket import HostapdSocket
 
 ETH_TYPE_8021x = 0x888E
 
@@ -30,7 +32,11 @@ class ExampleSwitch13(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(ExampleSwitch13, self).__init__(*args, **kwargs)
         # initialize mac address table.
-        self.mac_to_port = {}
+        self.mac_to_port = {1: {'01:80:c2:00:00:03': 1}}
+        self.portDict = {}
+        self.hostapd_socket = HostapdSocket(
+            self.logger, portDict=self.portDict)
+        hub.spawn(self.hostapd_socket.start_socket)
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
