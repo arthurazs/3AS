@@ -75,5 +75,5 @@ def main():
 
 
 if __name__ == '__main__':
-    setLogLevel('info')
+    setLogLevel('debug')
     main()
