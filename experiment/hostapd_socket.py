@@ -41,7 +41,6 @@ class HostapdSocket:
 
             readable, writable, exceptional = select(self.inputs, [], [])
             for client in readable:
-                self.logger.info('>>> hostapd_socket: inside loop')
                 if client is self.sock:
                     # Wait for a connection
                     connection, client_address = client.accept()
