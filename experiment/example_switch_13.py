@@ -79,11 +79,9 @@ class ExampleSwitch13(app_manager.RyuApp):
         # analyse the received packets using the packet library.
         pkt = packet.Packet(msg.data)
         eth_pkt = pkt.get_protocol(ethernet.ethernet)
+        src = eth_pkt.src
         dst = eth_pkt.dst
-        if eth_pkt.ethertype == ETH_TYPE_8021x:
-
-            src = eth_pkt.src
-
+        if eth_pkt.ethertype == ETH_TYPE_8021x or src in self.portDict:
             self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
