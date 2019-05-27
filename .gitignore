@@ -4,3 +4,15 @@
 
 # python
 *.pyc
+
+# certificates
+*.pem
+*.der
+*.key
+*.crt
+*.csr
+*.p12
+index.txt*
+passwords.mk
+serial
+serial.old
