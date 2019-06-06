@@ -27,7 +27,7 @@ Head over to the file `/etc/freeradius/3.0/mods-enabled/eap` and **update** the 
 eap {
   default_eap_type = tls
   tls-config tls-common {
-    home_certs = '<WHEREVER THIS REPO IS>/eva/experiment/certificates'
+    home_certs = '/<WHEREVER THIS REPO IS>/eva/experiment/certificates'
     private_key_password = icuff
     private_key_file = ${home_certs}/radius/server.key
     certificate_file = ${home_certs}/radius/server.pem
