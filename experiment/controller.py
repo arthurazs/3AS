@@ -109,5 +109,6 @@ class ExampleSwitch13(app_manager.RyuApp):
             datapath.send_msg(out)
         else:
             match = parser.OFPMatch(
-                in_port=in_port, eth_dst=dst, eth_type=eth_pkt.ethertype)
+                in_port=in_port, eth_src=src,
+                eth_dst=dst, eth_type=eth_pkt.ethertype)
             self.add_flow(datapath, 1, match, [], 1)  # drop
