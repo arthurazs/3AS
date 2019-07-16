@@ -2,26 +2,25 @@ from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.log import setLogLevel, lg as logger
 from mininet.node import RemoteController
+from mininet.link import Intf
 from time import sleep
+from sys import argv
 
 
 class Topology(Topo):
     def __init__(self):
         Topo.__init__(self)
 
-        auth = self.addHost(  # TODO Improve
-            'auth', inNamespace=False, ip='10.0.0.1', mac='00:00:00:00:00:01')
-        scada = self.addHost(
-            'scada', ip='10.0.0.2', mac='00:00:00:00:00:02')
-        ev = self.addHost(
-            'ev', ip='10.0.0.3', mac='00:00:00:00:00:03')
+        auth = self.addHost('auth', ip='10.0.0.2', mac='00:00:00:00:00:02')
+        scada = self.addHost('scada', ip='10.0.0.3', mac='00:00:00:00:00:03')
+        ev = self.addHost('ev', ip='10.0.0.4', mac='00:00:00:00:00:04')
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
-        self.addLink(s1, auth)
-        self.addLink(s1, scada)
-        self.addLink(s1, s2)
-        self.addLink(s2, ev)
+        self.addLink(s1, s2, 1, 1)
+        self.addLink(s1, auth, 3, 0)
+        self.addLink(s1, scada, 4, 0)
+        self.addLink(s2, ev, 2, 0)
 
 
 def log_sleep(time):
@@ -29,14 +28,15 @@ def log_sleep(time):
     sleep(time)
 
 
-def main():
+def main(mac_address):
     # app.exe > logs/save_to.log 2>&1 &
     mn = Mininet(  # TODO Test without static ARP
         topo=Topology(),  # autoSetMacs=True,
         autoStaticArp=True,
-        controller=RemoteController('c0', ip='127.0.0.1', port=6653))
+        controller=RemoteController('c0', ip='10.0.0.1', port=6653))
     auth, scada, ev, s1, s2 = mn.get('auth', 'scada', 'ev', 's1', 's2')
 
+    Intf('enp0s3', node=s1, port=2)
     s1.cmd('rm -rf /var/run/wpa_supplicant')
 
     logger.info("*** Disabling hosts ipv6\n")
@@ -54,14 +54,15 @@ def main():
     s1.cmd('mkdir -p logs/pcap')
     s1.cmd('mkdir -p logs/auth')
     s1.cmd('tcpdump -i lo -w logs/pcap/openflow.pcap port not 1812 &')
-    s1.cmd('tcpdump -i s1-eth1 -w logs/pcap/s1-eth1.pcap &')
-    s1.cmd('tcpdump -i s1-eth2 -w logs/pcap/s1-eth2.pcap &')
-    s1.cmd('tcpdump -i s1-eth3 -w logs/pcap/s1-eth3.pcap &')
+    s1.cmd('tcpdump -i enp0s3 -w logs/pcap/enp0s3.pcap &')
     auth.cmd('tcpdump -i lo -w logs/pcap/radius.pcap port not 6653 &')
     auth.cmd('tcpdump -i auth-eth0 -w logs/pcap/hostapd.pcap &')
     ev.cmd('tcpdump -i ev-eth0 -w logs/pcap/ev.pcap &')
     scada.cmd('tcpdump -i scada-eth0 -w logs/pcap/scada.pcap &')
     mn.start()
+    auth.cmdPrint('arp -s 10.0.0.1 ' + mac_address)
+    s1.cmd('ifconfig enp0s3 0.0.0.0')
+    s1.cmd('ifconfig s1 10.0.0.1 netmask 255.0.0.0')
 
     # sleep(5)
 
@@ -106,4 +107,4 @@ def main():
 
 if __name__ == '__main__':
     setLogLevel('debug')
-    main()
+    main(argv[1])

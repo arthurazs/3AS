@@ -5,9 +5,9 @@ from json import loads
 
 
 class HostapdSocket:
-
+    LOCAL_IP = '10.0.0.1'
     def __init__(
-            self, logger, address='127.0.0.1', port=10000, portDict={}):
+            self, logger, address=LOCAL_IP, port=10000, portDict={}):
 
         # Create a TCP/IP socket
         self.sock = socket(AF_INET, SOCK_STREAM)

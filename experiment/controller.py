@@ -22,8 +22,8 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib import hub
 from hostapd_socket import HostapdSocket
-
 ETH_TYPE_8021x = 0x888E
+CONTROLLER_MAC = '08:00:27:25:46:0f'
 
 
 class ExampleSwitch13(app_manager.RyuApp):
@@ -31,9 +31,30 @@ class ExampleSwitch13(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(ExampleSwitch13, self).__init__(*args, **kwargs)
-        # initialize mac address table.
-        self.mac_to_port = {1: {'01:80:c2:00:00:03': 1}}
-        self.portDict = {}
+
+        # known hosts
+        self.mac_to_port = {
+            1: {
+                '01:80:c2:00:00:03': 3,  # s1, EAPOL to port 3
+                '00:00:00:00:00:02': 3,  # s1, EAPOL to port 3
+                CONTROLLER_MAC: 2,  # s1, LOCAL to port 2
+            },
+            2: {
+                '01:80:c2:00:00:03': 1,  # s2, EAPOL to port 1
+                '00:00:00:00:00:02': 1,  # s2, EAPOL to port 1
+                CONTROLLER_MAC: 1,  # s2, LOCAL to port 1
+            },
+        }
+
+        # authorized hosts
+        self.portDict = {
+            CONTROLLER_MAC: {
+                u'identity': u'controller',
+                u'address': CONTROLLER_MAC},
+            u'00:00:00:00:00:02':  {
+                u'identity': u'authenticator',
+                u'address': u'00:00:00:00:00:02'},
+        }
         self.hostapd_socket = HostapdSocket(
             self.logger, portDict=self.portDict)
         hub.spawn(self.hostapd_socket.start_socket)
