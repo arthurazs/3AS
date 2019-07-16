@@ -89,10 +89,7 @@ class ExampleSwitch13(app_manager.RyuApp):
 
             # if the destination mac address is already learned,
             # decide which port to output the packet, otherwise FLOOD.
-            if dst in self.mac_to_port[dpid]:
-                out_port = self.mac_to_port[dpid][dst]
-            else:
-                out_port = ofproto.OFPP_FLOOD
+            out_port = self.mac_to_port[dpid].get(dst, ofproto.OFPP_FLOOD)
 
             # construct action list.
             actions = [parser.OFPActionOutput(out_port)]
