@@ -117,13 +117,14 @@ def main(mac_address, interface):
     hostapd(auth)
 
     wpa(ev)
-    wpa_cli(ev, 'ev_ping.sh')
+    wpa_cli(ev, 'ev_server.sh')
 
     sleep(5)
     s1.cmdPrint('pkill -2 wpa_cli')
     s1.cmdPrint('pkill -2 wpa_supplicant')
     s1.cmdPrint('pkill -2 hostapd')
     s1.cmdPrint('pkill -2 freeradius')
+    s1.cmdPrint('pkill -2 server_ied')
     s1.cmdPrint('ovs-ofctl dump-flows s1 > ' + LOGS + 's1.log')
     s2.cmdPrint('ovs-ofctl dump-flows s2 > ' + LOGS + 's2.log')
     s1.cmdPrint('chmod +r ' + AUTH_LOGS + 'freeradius.log')
