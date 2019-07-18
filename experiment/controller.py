@@ -23,7 +23,7 @@ from ryu.lib.packet import ethernet
 from ryu.lib import hub
 from hostapd_socket import HostapdSocket
 ETH_TYPE_8021x = 0x888E
-CONTROLLER_MAC = '08:00:27:25:46:0f'
+EAPOL_MAC = '01:80:c2:00:00:03'
 
 
 class ExampleSwitch13(app_manager.RyuApp):
@@ -31,16 +31,18 @@ class ExampleSwitch13(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(ExampleSwitch13, self).__init__(*args, **kwargs)
+        CONTROLLER_MAC = self.CONF.mac_address
+        self.logger.info('>>> SDN Controller MAC ' + CONTROLLER_MAC)
 
         # known hosts
         self.mac_to_port = {
             1: {
-                '01:80:c2:00:00:03': 3,  # s1, EAPOL to port 3
+                EAPOL_MAC: 3,  # s1, EAPOL to port 3
                 '00:00:00:00:00:02': 3,  # s1, EAPOL to port 3
                 CONTROLLER_MAC: 2,  # s1, LOCAL to port 2
             },
             2: {
-                '01:80:c2:00:00:03': 1,  # s2, EAPOL to port 1
+                EAPOL_MAC: 1,  # s2, EAPOL to port 1
                 '00:00:00:00:00:02': 1,  # s2, EAPOL to port 1
                 CONTROLLER_MAC: 1,  # s2, LOCAL to port 1
             },

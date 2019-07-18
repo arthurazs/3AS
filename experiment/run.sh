@@ -1,34 +1,38 @@
-clear
+if [ -z "$1" ]; then
+    echo "Usage: sh run.sh <interface>"
+    exit 0
+else
 
-echo ">>> Killing ryu and mininet"
-pkill ryu-manager
-pkill mn
+    clear
 
-echo ">>> Cleaning mininet"
-sudo mn -c
+    echo ">>> Killing ryu and mininet"
+    pkill ryu-manager
+    pkill mn
 
-echo ">>> Removing DNS"
-sudo systemctl disable avahi-daemon
-sudo service avahi-daemon stop
+    echo ">>> Cleaning logs"
+    sudo rm -r logs/*
 
-# run experiment
-echo ">>> Cleaning logs"
-sudo rm -r logs/*
+    echo ">>> Cleaning mininet"
+    mkdir -p logs/pre
+    sudo mn -c > logs/pre/mn_clean.log 2>&1
 
-#
-echo ">>> Fix IP address"
-MAC=$(sudo cat /sys/class/net/$1/address)
-sudo ifconfig $1 10.0.0.1 netmask 255.0.0.0
+    echo ">>> Removing DNS"
+    sudo systemctl disable avahi-daemon > logs/pre/avahi_disable.log 2>&1
+    sudo service avahi-daemon stop > logs/pre/avahi_stop.log 2>&1
 
-echo ">>> Running ryu"
-# TODO add MAC as param here
-ryu-manager controller.py --verbose > logs/ryu.log 2>&1 &
-echo ">>> Running mininet"
+    echo ">>> Fix IP address"
+    MAC=$(sudo cat /sys/class/net/$1/address)
+    sudo ifconfig $1 10.0.0.1 netmask 255.0.0.0
+
+    echo ">>> Running ryu"
+    ryu-manager --user-flags flags.py controller.py --mac_address $MAC --verbose > logs/ryu.log 2>&1 &
+    echo ">>> Running mininet"
     sudo python scenario.py $MAC $1 > logs/mininet.log 2>&1
 
-# kill pox
-echo ">>> Killing ryu"
-pkill ryu-manager
+    # kill pox
+    echo ">>> Killing ryu"
+    pkill ryu-manager
 
-echo ">>> Restarting network interface"
-sudo service NetworkManager restart
+    echo ">>> Restarting network interface"
+    sudo service NetworkManager restart
+fi
