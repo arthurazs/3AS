@@ -24,6 +24,7 @@ from ryu.lib import hub
 from hostapd_socket import HostapdSocket
 ETH_TYPE_8021x = 0x888E
 EAPOL_MAC = '01:80:c2:00:00:03'
+SCADA_MAC = '00:00:00:00:00:03'
 
 
 class ExampleSwitch13(app_manager.RyuApp):
@@ -37,14 +38,16 @@ class ExampleSwitch13(app_manager.RyuApp):
         # known hosts
         self.mac_to_port = {
             1: {
-                EAPOL_MAC: 3,  # s1, EAPOL to port 3
-                '00:00:00:00:00:02': 3,  # s1, EAPOL to port 3
-                CONTROLLER_MAC: 2,  # s1, LOCAL to port 2
+                EAPOL_MAC: 3,               # s1, EAPOL to port 3
+                '00:00:00:00:00:02': 3,     # s1, EAPOL to port 3
+                CONTROLLER_MAC: 2,          # s1, LOCAL to port 2
+                SCADA_MAC: 4,               # s1, SCADA to port 4
             },
             2: {
-                EAPOL_MAC: 1,  # s2, EAPOL to port 1
-                '00:00:00:00:00:02': 1,  # s2, EAPOL to port 1
-                CONTROLLER_MAC: 1,  # s2, LOCAL to port 1
+                EAPOL_MAC: 1,               # s2, EAPOL to port 1
+                '00:00:00:00:00:02': 1,     # s2, EAPOL to port 1
+                CONTROLLER_MAC: 1,          # s2, LOCAL to port 1
+                SCADA_MAC: 1,               # s2, SCADA to port 1
             },
         }
 
@@ -56,6 +59,9 @@ class ExampleSwitch13(app_manager.RyuApp):
             u'00:00:00:00:00:02':  {
                 u'identity': u'authenticator',
                 u'address': u'00:00:00:00:00:02'},
+            SCADA_MAC: {
+                u'identity': u'controller',
+                u'address': SCADA_MAC},
         }
         self.hostapd_socket = HostapdSocket(
             self.logger, portDict=self.portDict)
@@ -131,6 +137,9 @@ class ExampleSwitch13(app_manager.RyuApp):
                 data=msg.data)
             datapath.send_msg(out)
         else:
+            self.logger.info(
+                '>>> s' + str(dpid) + ' DROP from ' + str(src) +
+                ' (port ' + str(in_port) + ') to ' + str(dst))
             match = parser.OFPMatch(
                 in_port=in_port, eth_src=src,
                 eth_dst=dst, eth_type=eth_pkt.ethertype)

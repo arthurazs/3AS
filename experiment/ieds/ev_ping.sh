@@ -5,7 +5,8 @@ CMD=$2
 
 if [ "$CMD" = "CONNECTED" ]; then
     echo "$IFNAME Pinging..."
-    ping -c 1 10.0.0.4
+    sleep 1
+    ping -c 1 10.0.0.3
 fi
 
 if [ "$CMD" = "DISCONNECTED" ]; then

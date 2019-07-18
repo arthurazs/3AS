@@ -16,49 +16,44 @@ PCAP_LOGS = LOGS + 'pcap/'
 
 
 def hostapd(node):
-    command = AUTH_ROOT + './sdn-hostapd '
-    config = AUTH_ROOT + 'sdn-hostapd.conf -t '
-    log = ' > ' + AUTH_LOGS + 'sdn-hostapd.log 2>&1 &'
-    node.cmdPrint(command + config + log)
+    command = AUTH_ROOT + './sdn-hostapd'
+    config = AUTH_ROOT + 'sdn-hostapd.conf -t'
+    log = '> ' + AUTH_LOGS + 'sdn-hostapd.log 2>&1 &'
+    node.cmdPrint(command, config, log)
 
 
 def freeradius(node):
-    command = 'freeradius -t -xx -l '
+    command = 'freeradius -t -xx -l'
     log = AUTH_LOGS + 'freeradius.log'
-    node.cmdPrint(command + log)
+    node.cmdPrint(command, log)
 
 
 def wpa(node):
-    # wpa_supplicant -i INTF -D wired
-    # -c config/NAME.conf -dd
-    # -f logs/wpa-NAME.log &
-    command = 'wpa_supplicant -i ' + str(node.intf()) + ' -D wired '
-    config = '-c ' + IEDS_ROOT + str(node) + '.conf -dd -f '
+    command = 'wpa_supplicant -i ' + str(node.intf()) + ' -D wired'
+    config = '-c ' + IEDS_ROOT + str(node) + '.conf -dd -f'
     log = AUTH_LOGS + 'wpa-' + str(node) + '.log &'
-    node.cmdPrint(command + config + log)
+    node.cmdPrint(command, config, log)
 
 
 def wpa_cli(node, script):
-    # wpa_cli -i INTF -a experiment/ieds/scada_ping.sh
     command = 'wpa_cli -i ' + str(node.intf())
-    filename = ' -a ' + IEDS_ROOT + script
-    log = ' > ' + AUTH_LOGS + 'ping.log 2>&1 &'
-    node.cmdPrint(command + filename + log)
+    filename = '-a ' + IEDS_ROOT + script
+    log = '> ' + AUTH_LOGS + 'ping.log 2>&1 &'
+    node.cmdPrint(command, filename, log)
 
 
 def pcap(node, name=None, intf=None, port=None):
-    # tcpdump -i intf -w logs/name.pcap port not number &
     if not name:
         name = str(node)
     if not intf:
         intf = node.intf()
-    command = 'tcpdump -i ' + str(intf) + ' -w '
+    command = 'tcpdump -i ' + str(intf) + ' -w'
     log = PCAP_LOGS + name + '.pcap'
-    tail = ' port not ' + str(port) if port else ''
-    node.cmdPrint(command + log + tail + ' &')
+    tail = 'port not ' + str(port) if port else ''
+    node.cmdPrint(command, log, tail, '&')
 
 
-def log_sleep(time):
+def sleep(time):
     logger.info('*** Sleeping for {} seconds...\n'.format(time))
     _sleep(time)
 
@@ -122,15 +117,9 @@ def main(mac_address, interface):
     hostapd(auth)
 
     wpa(ev)
-    log_sleep(.1)
+    wpa_cli(ev, 'ev_ping.sh')
 
-    wpa(scada)
-
-    log_sleep(.1)
-    wpa_cli(scada, 'scada_ping.sh')
-
-    log_sleep(5)
-
+    sleep(5)
     s1.cmdPrint('pkill -2 wpa_cli')
     s1.cmdPrint('pkill -2 wpa_supplicant')
     s1.cmdPrint('pkill -2 hostapd')
@@ -139,6 +128,7 @@ def main(mac_address, interface):
     s2.cmdPrint('ovs-ofctl dump-flows s2 > ' + LOGS + 's2.log')
     s1.cmdPrint('chmod +r ' + AUTH_LOGS + 'freeradius.log')
     s1.cmdPrint('pkill -2 tcpdump')
+
     mn.stop()
 
 
