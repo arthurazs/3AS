@@ -21,8 +21,10 @@ else
     sudo service avahi-daemon stop > logs/pre/avahi_stop.log 2>&1
 
     echo ">>> Fix IP address"
+    # sudo service NetworkManager restart
     MAC=$(sudo cat /sys/class/net/$1/address)
     sudo ifconfig $1 10.0.0.1 netmask 255.0.0.0
+    # sudo arp -s 10.0.0.2 00:00:00:00:00:02
 
     echo ">>> Running ryu"
     ryu-manager --user-flags flags.py controller.py --mac_address $MAC --verbose > logs/ryu.log 2>&1 &

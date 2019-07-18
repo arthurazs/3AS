@@ -61,6 +61,7 @@ def main(mac_address, interface):
     scada.cmd('tcpdump -i scada-eth0 -w logs/pcap/scada.pcap &')
 
     mn.start()
+
     # auth.cmdPrint('arp -s 10.0.0.1 ' + mac_address)
     s1.cmd('ifconfig ' + interface + ' 0.0.0.0')
     s1.cmd('ifconfig s1 10.0.0.1 netmask 255.0.0.0')
