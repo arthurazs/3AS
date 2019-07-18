@@ -24,7 +24,7 @@ echo ">>> Running ryu"
 # TODO add MAC as param here
 ryu-manager controller.py --verbose > logs/ryu.log 2>&1 &
 echo ">>> Running mininet"
-sudo python scenario.py $MAC > logs/mininet.log 2>&1
+    sudo python scenario.py $MAC $1 > logs/mininet.log 2>&1
 
 # kill pox
 echo ">>> Killing ryu"
