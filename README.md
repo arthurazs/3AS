@@ -63,7 +63,7 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
 And use that NIC to run the experiments:
 
 ```bash
-cd eva/experiment
+cd eva
 sh run.sh enp0s3
 ```
 
