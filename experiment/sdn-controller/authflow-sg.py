@@ -23,8 +23,8 @@ from ryu.lib.packet import ethernet
 from ryu.lib import hub
 from hostapd_socket import HostapdSocket
 ETH_TYPE_8021x = 0x888E
-EAPOL_MAC = '01:80:c2:00:00:03'
-SCADA_MAC = '00:00:00:00:00:03'
+EAPOL_MAC = u'01:80:c2:00:00:03'
+SCADA_MAC = u'00:00:00:00:00:03'
 
 
 class ExampleSwitch13(app_manager.RyuApp):
