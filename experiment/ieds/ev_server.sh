@@ -1,5 +1,4 @@
 #!/bin/sh
-#wpa_cli -atst.sh
 IFNAME=$1
 CMD=$2
 

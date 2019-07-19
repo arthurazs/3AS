@@ -29,7 +29,7 @@ else
     echo ">>> Running ryu"
     ryu-manager --user-flags experiment/sdn-controller/flags.py experiment/sdn-controller/authflow-sg.py --mac_address $MAC --verbose > logs/authflow-sg.log 2>&1 &
     echo ">>> Running mininet"
-    sudo python experiment/network.py $MAC $1
+    sudo python experiment/network_test.py $MAC $1
 
     # kill pox
     echo ">>> Killing ryu"

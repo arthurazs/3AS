@@ -36,10 +36,10 @@ def wpa(node):
     node.cmdPrint(command, config, log)
 
 
-def wpa_cli(node, script):
+def wpa_cli(node, script, name):
     command = 'wpa_cli -i ' + str(node.intf())
     filename = '-a ' + IEDS_ROOT + script
-    log = '> ' + AUTH_LOGS + 'ping.log 2>&1 &'
+    log = '> ' + AUTH_LOGS + name + '.log 2>&1 &'
     node.cmdPrint(command, filename, log)
 
 
@@ -118,7 +118,8 @@ def main(mac_address, interface):
     hostapd(auth)
 
     wpa(ev)
-    wpa_cli(ev, 'ev_server.sh')
+    sleep(.1)
+    wpa_cli(ev, 'ev_server.sh', 'ev_server')
 
     CLI(mn)
 
