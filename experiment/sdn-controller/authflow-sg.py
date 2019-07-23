@@ -32,6 +32,10 @@ from ryu.app.wsgi import WSGIApplication
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 
+from abac import guard
+from vakt import Inquiry
+from mms_client import Mms
+
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
 # supported ofctl versions in this restful app
@@ -176,9 +180,19 @@ class StatsController(ControllerBase):
 
     def auth_user(self, req, mac, identity, **_kwargs):
         self.authorized[mac] = {'address': mac, 'identity': identity}
-        LOG.info(">>> {'AUTH-OK':" + str(self.authorized[mac]) + '}')
-        body = json.dumps("{'AUTH-OK':" + str(self.authorized[mac]) + '}')
-        return Response(content_type='application/json', body=body)
+        with Mms('10.0.0.4') as ied:
+            goose_group = ied.read_goose_group()
+        publish_goose = Inquiry(
+            action={'type': 'publish', 'dest': goose_group},
+            resource='GOOSE',
+            subject=identity)
+        if guard.is_allowed(publish_goose):
+            LOG.info(">>> {'AUTH-OK':" + str(self.authorized[mac]) + '}')
+            body = json.dumps("{'AUTH-OK':" + str(self.authorized[mac]) + '}')
+            return Response(content_type='application/json', body=body)
+        else:
+            LOG.info(">>> {'NOT-OK':" + str(self.authorized[mac]) + '}')
+            return Response(status=400)
 
 
 class RestStatsApi(app_manager.RyuApp):
