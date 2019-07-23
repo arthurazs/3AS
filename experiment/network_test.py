@@ -65,14 +65,14 @@ class Topology(Topo):
 
         auth = self.addHost('auth', ip='10.0.0.2', mac='00:00:00:00:00:02')
         scada = self.addHost('scada', ip='10.0.0.3', mac='00:00:00:00:00:03')
-        ev = self.addHost('ev', ip='10.0.0.4', mac='00:00:00:00:00:04')
+        ied = self.addHost('ied', ip='10.0.0.4', mac='00:00:00:00:00:04')
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
         self.addLink(s1, s2, 1, 1)
         self.addLink(s1, auth, 3, 0)
         self.addLink(s1, scada, 4, 0)
-        self.addLink(s2, ev, 2, 0)
+        self.addLink(s2, ied, 2, 0)
 
 
 def main(mac_address, interface):
@@ -80,7 +80,7 @@ def main(mac_address, interface):
     mn = Mininet(  # TODO Test without static ARP
         topo=Topology(), autoStaticArp=True,
         controller=RemoteController('c0', ip='10.0.0.1', port=6653))
-    auth, scada, ev, s1, s2 = mn.get('auth', 'scada', 'ev', 's1', 's2')
+    auth, scada, ied, s1, s2 = mn.get('auth', 'scada', 'ied', 's1', 's2')
 
     Intf(interface, node=s1, port=2)
     s1.cmd('rm -rf /var/run/wpa_supplicant')
@@ -104,7 +104,7 @@ def main(mac_address, interface):
     pcap(s1, name='openflow', intf='lo', port='1812')
     pcap(auth, name='freeradius', intf='lo', port='6653')
     pcap(auth, name='sdn-hostapd')
-    pcap(ev)
+    pcap(ied)
     pcap(scada)
 
     mn.start()
@@ -117,9 +117,9 @@ def main(mac_address, interface):
     freeradius(auth)
     hostapd(auth)
 
-    wpa(ev)
+    wpa(ied)
     sleep(.1)
-    wpa_cli(ev, 'ev_server.sh', 'ev_server')
+    wpa_cli(ied, 'ied_server.sh', 'ied_server')
 
     CLI(mn)
 

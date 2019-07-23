@@ -23,13 +23,13 @@ include passwords.mk
 #
 ######################################################################
 .PHONY: all
-all: index.txt serial server ca scada ev01
+all: index.txt serial server ca scada ied01
 
 .PHONY: scada
 scada: scada.pem
 
-.PHONY: ev01
-ev01: ev01.pem
+.PHONY: ied01
+ied01: ied01.pem
 
 .PHONY: ca
 ca: ca.der
@@ -38,13 +38,13 @@ ca: ca.der
 server: server.pem server.vrfy
 
 .PHONY: verify
-verify: server.vrfy scada.vrfy ev01.vrfy
+verify: server.vrfy scada.vrfy ied01.vrfy
 
-passwords.mk: server.cnf ca.cnf scada.cnf ev01.cnf
+passwords.mk: server.cnf ca.cnf scada.cnf ied01.cnf
 	@echo "PASSWORD_SERVER	= '$(shell grep output_password server.cnf | sed 's/.*=//;s/^ *//')'"		> $@
 	@echo "PASSWORD_CA	= '$(shell grep output_password ca.cnf | sed 's/.*=//;s/^ *//')'"		>> $@
 	@echo "PASSWORD_SCADA	= '$(shell grep output_password scada.cnf | sed 's/.*=//;s/^ *//')'"		>> $@
-	@echo "PASSWORD_EV01	= '$(shell grep output_password ev01.cnf | sed 's/.*=//;s/^ *//')'"		>> $@
+	@echo "PASSWORD_IED01	= '$(shell grep output_password ied01.cnf | sed 's/.*=//;s/^ *//')'"		>> $@
 	@echo "CA_DEFAULT_DAYS  = '$(shell grep default_days ca.cnf | sed 's/.*=//;s/^ *//')'"			>> $@
 
 ######################################################################
@@ -115,29 +115,29 @@ scada.vrfy: ca.pem scada.pem
 
 ######################################################################
 #
-#  Create a new ev01 certificate, signed by the the above server
+#  Create a new ied01 certificate, signed by the the above server
 #  certificate.
 #
 ######################################################################
-ev01.csr ev01.key: ev01.cnf
-	$(OPENSSL) req -new  -out ev01.csr -keyout ../ev01/ev01.key -config ./ev01.cnf
-	chmod go+r ../ev01/ev01.key
+ied01.csr ied01.key: ied01.cnf
+	$(OPENSSL) req -new  -out ied01.csr -keyout ../ieds/ied01.key -config ./ied01.cnf
+	chmod go+r ../ieds/ied01.key
 
-ev01.crt: ev01.csr ca.pem ca.key
-	$(OPENSSL) ca -batch -keyfile ca.key -cert ../ca.pem -in ev01.csr  -key $(PASSWORD_CA) -out ev01.crt -config ./ev01.cnf
+ied01.crt: ied01.csr ca.pem ca.key
+	$(OPENSSL) ca -batch -keyfile ca.key -cert ../ca.pem -in ied01.csr  -key $(PASSWORD_CA) -out ied01.crt -config ./ied01.cnf
 
-ev01.p12: ev01.crt
-	$(OPENSSL) pkcs12 -export -in ev01.crt -inkey ../ev01/ev01.key -out ev01.p12  -passin pass:$(PASSWORD_EV01) -passout pass:$(PASSWORD_EV01)
-	chmod g+r ev01.p12
+ied01.p12: ied01.crt
+	$(OPENSSL) pkcs12 -export -in ied01.crt -inkey ../ieds/ied01.key -out ied01.p12  -passin pass:$(PASSWORD_IED01) -passout pass:$(PASSWORD_IED01)
+	chmod g+r ied01.p12
 
-ev01.pem: ev01.p12
-	$(OPENSSL) pkcs12 -in ev01.p12 -out ../ev01/ev01.pem -passin pass:$(PASSWORD_EV01) -passout pass:$(PASSWORD_EV01)
-	chmod go+r ../ev01/ev01.pem
+ied01.pem: ied01.p12
+	$(OPENSSL) pkcs12 -in ied01.p12 -out ../ieds/ied01.pem -passin pass:$(PASSWORD_IED01) -passout pass:$(PASSWORD_IED01)
+	chmod go+r ../ieds/ied01.pem
 
-.PHONY: ev01.vrfy
-ev01.vrfy: ca.pem ev01.pem
+.PHONY: ied01.vrfy
+ied01.vrfy: ca.pem ied01.pem
 	c_rehash .
-	$(OPENSSL) verify -CApath . ../ev01/ev01.pem
+	$(OPENSSL) verify -CApath . ../ieds/ied01.pem
 
 ######################################################################
 #
@@ -157,7 +157,7 @@ printca:
 	$(OPENSSL) x509 -text -in ../ca.pem
 
 clean:
-	@rm -f *~ *old scada.csr scada.crt scada.p12 ../scada/scada.* ../radius/server.* ../ca.pem ev01.csr ev01.crt ev01.p12 ../ev01/ev*
+	@rm -f *~ *old scada.csr scada.crt scada.p12 ../scada/scada.* ../radius/server.* ../ca.pem ied01.csr ied01.crt ied01.p12 ../ieds/ied*
 
 #
 #	Make a target that people won't run too often.

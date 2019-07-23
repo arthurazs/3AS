@@ -39,15 +39,15 @@ emailAddress		= optional
 
 [ req ]
 prompt			= no
-distinguished_name	= ev01
+distinguished_name	= ied01
 default_bits		= 2048
 input_password		= whatever
-output_password		= ev01
+output_password		= ied01
 
-[ev01]
+[ied01]
 countryName		= BR
 stateOrProvinceName	= Rio de Janeiro
 localityName		= Niteroi
 organizationName	= MidiaCom
-emailAddress		= ev01@example.com
-commonName		= Electric Vehicle 01
+emailAddress		= ied01@example.com
+commonName		= Intelligent Electronic Device 01
