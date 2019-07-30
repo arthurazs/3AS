@@ -4,7 +4,8 @@ CMD=$2
 
 if [ "$CMD" = "CONNECTED" ]; then
     echo "$IFNAME Starting MMS Server..."
-    sudo experiment/ieds/./server_ied $IFNAME
+    echo "$IFNAME Publishing GOOSE..."
+    sudo experiment/ieds/./server_ied_pub $IFNAME
 fi
 
 if [ "$CMD" = "DISCONNECTED" ]; then

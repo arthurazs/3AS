@@ -34,7 +34,7 @@ from abac import guard
 from vakt import Inquiry
 from mms_client import Mms
 from ryu import cfg
-from ryu.ofproto.ether import ETH_TYPE_IP
+from ryu.ofproto.ether import ETH_TYPE_IP, ETH_TYPE_ARP
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
@@ -43,13 +43,45 @@ supported_ofctl = {ofproto_v1_3.OFP_VERSION: ofctl_v1_3}
 MMS_IP = '10.0.0.1'
 MMS_TCP = 102
 ETH_TYPE_8021X = 0x888E
+ETH_TYPE_GOOSE = 0x88B8
 EAPOL_MAC = u'01:80:c2:00:00:03'
 SCADA_MAC = u'00:00:00:00:00:03'
 BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = cfg.CONF.mac_address
 
-IEDS = {'ied01': {'ip': '10.0.0.4', 'port': 2}}
+IEDS = {
+    'ied01': {'ip': '10.0.0.4', 'port': 2},
+    'ied02': {'ip': '10.0.0.5', 'port': 3}
+}
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
+
+
+def add_authenticator_flow(datapath):
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+
+    inst_to = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
+        parser.OFPActionOutput(ofproto_v1_3.OFPP_LOCAL)])]
+    match_to = parser.OFPMatch(
+        in_port=3, eth_src='00:00:00:00:00:02', eth_dst=CONTROLLER_MAC)
+
+    inst_from = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
+        parser.OFPActionOutput(3)])]
+    match_from = parser.OFPMatch(
+        in_port=ofproto_v1_3.OFPP_LOCAL, eth_dst='00:00:00:00:00:02',
+        eth_src=CONTROLLER_MAC)
+
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=1,
+        match=match_to, instructions=inst_to,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
+
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=1,
+        match=match_from, instructions=inst_from,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
 
 
 def add_mms_to(datapath, mac, port, ip):
@@ -88,6 +120,21 @@ def add_mms_from(datapath, mac, port, ip):
     datapath.send_msg(mod)
 
 
+def add_goose(datapath, mac, group, in_port, out_port):
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+    actions = [parser.OFPActionOutput(out_port)]
+    match = parser.OFPMatch(
+        eth_type=ETH_TYPE_GOOSE, in_port=in_port, eth_src=mac, eth_dst=group)
+
+    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=3,
+        match=match, instructions=inst,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
+
+
 class StatsController(ControllerBase):
     def __init__(self, req, link, data, **config):
         super(StatsController, self).__init__(req, link, data, **config)
@@ -112,13 +159,20 @@ class StatsController(ControllerBase):
             goose_group = ied.read_goose_group()
             LOG.debug('>>> GOOSE group ' + str(goose_group))
 
-        LOG.debug('>>> Connecting to IED')
+        LOG.debug('>>> Inquiring ABAC')
         publish_goose = Inquiry(
             action={'type': 'publish', 'dest': goose_group},
             resource='GOOSE', subject=identity)
 
         if guard.is_allowed(publish_goose):
             self.authenticated[mac] = {'address': mac, 'identity': identity}
+            if goose_group in self.authenticated:
+                add_goose(
+                    self.s2, self.authenticated[goose_group]['address'],
+                    goose_group, 2, IEDS[identity]['port'])
+            else:
+                self.authenticated[goose_group] = {
+                    'address': mac, 'identity': identity}
             LOG.info(">>> {'AUTH-OK':" + str(self.authenticated[mac]) + '}')
             body = json.dumps(
                 "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
@@ -201,6 +255,9 @@ class RestStatsApi(app_manager.RyuApp):
                                           ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
 
+        if datapath.id == 1:
+            add_authenticator_flow(datapath)
+
     def add_flow(self, datapath, priority, match, actions, timeout=0):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -233,8 +290,10 @@ class RestStatsApi(app_manager.RyuApp):
         eth_pkt = pkt.get_protocol(ethernet.ethernet)
         src = eth_pkt.src.lower()
         dst = eth_pkt.dst.lower()
-        if eth_pkt.ethertype == ETH_TYPE_8021X or (
-                src in self.authenticated and dst in self.authenticated):
+        if \
+                eth_pkt.ethertype == ETH_TYPE_8021X:
+                # eth_pkt.ethertype == ETH_TYPE_8021X or \
+                # (src in self.authenticated and dst in self.authenticated):
             LOG.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
@@ -272,4 +331,4 @@ class RestStatsApi(app_manager.RyuApp):
                 eth_dst=dst,
                 # eth_type=eth_pkt.ethertype
             )
-            self.add_flow(datapath, 1, match, [], 1)  # drop
+            self.add_flow(datapath, 1, match, [])  # drop
