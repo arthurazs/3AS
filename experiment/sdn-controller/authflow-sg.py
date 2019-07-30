@@ -15,14 +15,12 @@
 
 import logging
 import json
-import ast
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller import dpset
 from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.exception import RyuException
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib import ofctl_v1_3
 from ryu.app.wsgi import ControllerBase
@@ -35,163 +33,98 @@ from ryu.lib.packet import ethernet
 from abac import guard
 from vakt import Inquiry
 from mms_client import Mms
+from ryu import cfg
+from ryu.ofproto.ether import ETH_TYPE_IP
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
-# supported ofctl versions in this restful app
 supported_ofctl = {ofproto_v1_3.OFP_VERSION: ofctl_v1_3}
 
+MMS_IP = '10.0.0.1'
+MMS_TCP = 102
 ETH_TYPE_8021X = 0x888E
 EAPOL_MAC = u'01:80:c2:00:00:03'
 SCADA_MAC = u'00:00:00:00:00:03'
 BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
+CONTROLLER_MAC = cfg.CONF.mac_address
+
+IEDS = {'ied01': {'ip': '10.0.0.4', 'port': 2}}
+MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
 
 
-class CommandNotFoundError(RyuException):
-    message = 'No such command : %(cmd)s'
+def add_mms_to(datapath, mac, port, ip):
+    dpid = datapath.id
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+    actions = [parser.OFPActionOutput(port)]
+    match = parser.OFPMatch(
+        eth_type=ETH_TYPE_IP, ip_proto=6,
+        in_port=MMS_CONTROLLER[dpid], eth_src=CONTROLLER_MAC,
+        eth_dst=mac, ipv4_src=MMS_IP, ipv4_dst=ip, tcp_dst=MMS_TCP)
+
+    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=3,
+        match=match, instructions=inst,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
 
 
-class PortNotFoundError(RyuException):
-    message = 'No such port info: %(port_no)s'
+def add_mms_from(datapath, mac, port, ip):
+    dpid = datapath.id
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+    actions = [parser.OFPActionOutput(MMS_CONTROLLER[dpid])]
+    match = parser.OFPMatch(
+        eth_type=ETH_TYPE_IP, ip_proto=6,
+        in_port=port, eth_src=mac, eth_dst=CONTROLLER_MAC,
+        ipv4_src=ip, ipv4_dst=MMS_IP, tcp_src=MMS_TCP)
 
-
-def stats_method(method):
-    def wrapper(self, req, dpid, *args, **kwargs):
-        # Get datapath instance from DPSet
-        try:
-            dp = self.dpset.get(int(str(dpid), 0))
-        except ValueError:
-            LOG.exception('Invalid dpid: %s', dpid)
-            return Response(status=400)
-        if dp is None:
-            LOG.error('No such Datapath: %s', dpid)
-            return Response(status=404)
-
-        # Get lib/ofctl_* module
-        try:
-            ofctl = supported_ofctl.get(dp.ofproto.OFP_VERSION)
-        except KeyError:
-            LOG.exception('Unsupported OF version: %s',
-                          dp.ofproto.OFP_VERSION)
-            return Response(status=501)
-
-        # Invoke StatsController method
-        try:
-            ret = method(self, req, dp, ofctl, *args, **kwargs)
-            return Response(content_type='application/json',
-                            body=json.dumps(ret))
-        except ValueError:
-            LOG.exception('Invalid syntax: %s', req.body)
-            return Response(status=400)
-        except AttributeError:
-            LOG.exception('Unsupported OF request in this version: %s',
-                          dp.ofproto.OFP_VERSION)
-            return Response(status=501)
-
-    return wrapper
-
-
-def command_method(method):
-    def wrapper(self, req, *args, **kwargs):
-        # Parse request json body
-        try:
-            if req.body:
-                body = ast.literal_eval(req.body.decode('utf-8'))
-            else:
-                body = {}
-        except SyntaxError:
-            LOG.exception('Invalid syntax: %s', req.body)
-            return Response(status=400)
-
-        # Get datapath_id from request parameters
-        dpid = body.get('dpid', None)
-        if not dpid:
-            try:
-                dpid = kwargs.pop('dpid')
-            except KeyError:
-                LOG.exception('Cannot get dpid from request parameters')
-                return Response(status=400)
-
-        # Get datapath instance from DPSet
-        try:
-            dp = self.dpset.get(int(str(dpid), 0))
-        except ValueError:
-            LOG.exception('Invalid dpid: %s', dpid)
-            return Response(status=400)
-        if dp is None:
-            LOG.error('No such Datapath: %s', dpid)
-            return Response(status=404)
-
-        # Get lib/ofctl_* module
-        try:
-            ofctl = supported_ofctl.get(dp.ofproto.OFP_VERSION)
-        except KeyError:
-            LOG.exception('Unsupported OF version: version=%s',
-                          dp.ofproto.OFP_VERSION)
-            return Response(status=501)
-
-        # Invoke StatsController method
-        try:
-            method(self, req, dp, ofctl, body, *args, **kwargs)
-            return Response(status=200)
-        except ValueError:
-            LOG.exception('Invalid syntax: %s', req.body)
-            return Response(status=400)
-        except AttributeError:
-            LOG.exception('Unsupported OF request in this version: %s',
-                          dp.ofproto.OFP_VERSION)
-            return Response(status=501)
-        except CommandNotFoundError as e:
-            LOG.exception(e.message)
-            return Response(status=404)
-        except PortNotFoundError as e:
-            LOG.exception(e.message)
-            return Response(status=404)
-
-    return wrapper
+    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=3,
+        match=match, instructions=inst,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
 
 
 class StatsController(ControllerBase):
     def __init__(self, req, link, data, **config):
         super(StatsController, self).__init__(req, link, data, **config)
+        self.dpset = data['dpset']
         self.waiters = data['waiters']
-        self.authorized = data['authorized']
-
-    @stats_method
-    def get_port_stats(self, req, dp, ofctl, port, **kwargs):
-        if port == "ALL":
-            port = None
-        return ofctl.get_port_stats(dp, self.waiters, port)
-
-    @command_method
-    def mod_flow_entry(self, req, dp, ofctl, flow, cmd, **kwargs):
-        cmd_convert = {
-            'add': dp.ofproto.OFPFC_ADD,
-            'modify': dp.ofproto.OFPFC_MODIFY,
-            'modify_strict': dp.ofproto.OFPFC_MODIFY_STRICT,
-            'delete': dp.ofproto.OFPFC_DELETE,
-            'delete_strict': dp.ofproto.OFPFC_DELETE_STRICT,
-        }
-        mod_cmd = cmd_convert.get(cmd, None)
-        if mod_cmd is None:
-            raise CommandNotFoundError(cmd=cmd)
-
-        ofctl.mod_flow_entry(dp, flow, mod_cmd)
+        self.authenticated = data['authenticated']
+        self.s1 = self.dpset.get(1)
+        self.s2 = self.dpset.get(2)
 
     def auth_user(self, req, mac, identity, **_kwargs):
-        self.authorized[mac] = {'address': mac, 'identity': identity}
-        with Mms('10.0.0.4') as ied:
+        LOG.info('>>> New authentication (%s, %s)' % (identity, mac))
+        LOG.debug('>>> Installing MMS flows...')
+        ip = IEDS[identity]['ip']
+        port = IEDS[identity]['port']
+        add_mms_to(self.s1, mac, 1, ip)
+        add_mms_to(self.s2, mac, port, ip)
+        add_mms_from(self.s1, mac, 1, ip)
+        add_mms_from(self.s2, mac, port, ip)
+
+        LOG.debug('>>> Connecting to IED')
+        with Mms(ip) as ied:
             goose_group = ied.read_goose_group()
+            LOG.debug('>>> GOOSE group ' + str(goose_group))
+
+        LOG.debug('>>> Connecting to IED')
         publish_goose = Inquiry(
             action={'type': 'publish', 'dest': goose_group},
-            resource='GOOSE',
-            subject=identity)
+            resource='GOOSE', subject=identity)
+
         if guard.is_allowed(publish_goose):
-            LOG.info(">>> {'AUTH-OK':" + str(self.authorized[mac]) + '}')
-            body = json.dumps("{'AUTH-OK':" + str(self.authorized[mac]) + '}')
+            self.authenticated[mac] = {'address': mac, 'identity': identity}
+            LOG.info(">>> {'AUTH-OK':" + str(self.authenticated[mac]) + '}')
+            body = json.dumps(
+                "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
             return Response(content_type='application/json', body=body)
         else:
-            LOG.info(">>> {'NOT-OK':" + str(self.authorized[mac]) + '}')
+            LOG.info(">>> {'NOT-OK':" + str(self.authenticated[mac]) + '}')
             return Response(status=400)
 
 
@@ -205,7 +138,6 @@ class RestStatsApi(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(RestStatsApi, self).__init__(*args, **kwargs)
 
-        CONTROLLER_MAC = self.CONF.mac_address
         LOG.info('>>> SDN Controller MAC ' + CONTROLLER_MAC)
 
         self.dpset = kwargs['dpset']
@@ -216,8 +148,8 @@ class RestStatsApi(app_manager.RyuApp):
         self.data['waiters'] = self.waiters
         mapper = wsgi.mapper
 
-        # authorized hosts
-        self.authorized = {
+        # authenticated hosts
+        self.authenticated = {
             CONTROLLER_MAC: {
                 u'identity': u'controller',
                 u'address': CONTROLLER_MAC},
@@ -248,84 +180,14 @@ class RestStatsApi(app_manager.RyuApp):
             },
         }
 
-        # device discovery
-        self.hosts = {
-            # mac: (dpid, port),
-        }
-
-        self.data['authorized'] = self.authorized
+        self.data['authenticated'] = self.authenticated
 
         wsgi.registory['StatsController'] = self.data
-
-        uri = '/port/{dpid}/{port}'
-        mapper.connect('stats', uri,
-                       controller=StatsController, action='get_port_stats',
-                       conditions=dict(method=['GET']))
-
-        uri = '/flowentry/{cmd}'
-        mapper.connect('stats', uri,
-                       controller=StatsController, action='mod_flow_entry',
-                       conditions=dict(method=['POST']))
 
         uri = '/authenticated/{mac}/{identity}'
         mapper.connect('stats', uri,
                        controller=StatsController, action='auth_user',
                        conditions=dict(method=['GET']))
-
-    @set_ev_cls([ofp_event.EventOFPStatsReply,
-                 ofp_event.EventOFPDescStatsReply,
-                 ofp_event.EventOFPFlowStatsReply,
-                 ofp_event.EventOFPAggregateStatsReply,
-                 ofp_event.EventOFPTableStatsReply,
-                 ofp_event.EventOFPTableFeaturesStatsReply,
-                 ofp_event.EventOFPPortStatsReply,
-                 ofp_event.EventOFPQueueStatsReply,
-                 ofp_event.EventOFPQueueDescStatsReply,
-                 ofp_event.EventOFPMeterStatsReply,
-                 ofp_event.EventOFPMeterFeaturesStatsReply,
-                 ofp_event.EventOFPMeterConfigStatsReply,
-                 ofp_event.EventOFPGroupStatsReply,
-                 ofp_event.EventOFPGroupFeaturesStatsReply,
-                 ofp_event.EventOFPGroupDescStatsReply,
-                 ofp_event.EventOFPPortDescStatsReply
-                 ], MAIN_DISPATCHER)
-    def stats_reply_handler(self, ev):
-        msg = ev.msg
-        dp = msg.datapath
-
-        if dp.id not in self.waiters:
-            return
-        if msg.xid not in self.waiters[dp.id]:
-            return
-        lock, msgs = self.waiters[dp.id][msg.xid]
-        msgs.append(msg)
-
-        flags = 0
-        if dp.ofproto.OFP_VERSION >= ofproto_v1_3.OFP_VERSION:
-            flags = dp.ofproto.OFPMPF_REPLY_MORE
-
-        if msg.flags & flags:
-            return
-        del self.waiters[dp.id][msg.xid]
-        lock.set()
-
-    @set_ev_cls([ofp_event.EventOFPSwitchFeatures,
-                 ofp_event.EventOFPQueueGetConfigReply,
-                 ofp_event.EventOFPRoleReply,
-                 ], MAIN_DISPATCHER)
-    def features_reply_handler(self, ev):
-        msg = ev.msg
-        dp = msg.datapath
-
-        if dp.id not in self.waiters:
-            return
-        if msg.xid not in self.waiters[dp.id]:
-            return
-        lock, msgs = self.waiters[dp.id][msg.xid]
-        msgs.append(msg)
-
-        del self.waiters[dp.id][msg.xid]
-        lock.set()
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -348,6 +210,7 @@ class RestStatsApi(app_manager.RyuApp):
                                              actions)]
         mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                 match=match, instructions=inst,
+                                command=ofproto.OFPFC_ADD,
                                 hard_timeout=timeout)
         datapath.send_msg(mod)
 
@@ -371,7 +234,7 @@ class RestStatsApi(app_manager.RyuApp):
         src = eth_pkt.src.lower()
         dst = eth_pkt.dst.lower()
         if eth_pkt.ethertype == ETH_TYPE_8021X or (
-                src in self.authorized and dst in self.authorized):
+                src in self.authenticated and dst in self.authenticated):
             LOG.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
@@ -398,13 +261,15 @@ class RestStatsApi(app_manager.RyuApp):
                 data=msg.data)
             datapath.send_msg(out)
         else:
-            unauthorized = dst if src in self.authorized else src
+            unauthenticated = dst if src in self.authenticated else src
             LOG.info(
-                '>>> ' + unauthorized + ' is not authenticated\n'
+                '>>> ' + unauthenticated + ' is not authenticated\n'
                 '>>> s' + str(dpid) + ' DROP from ' + str(src) +
                 ' (port ' + str(in_port) + ') to ' + str(dst)
             )
             match = parser.OFPMatch(
                 in_port=in_port, eth_src=src,
-                eth_dst=dst, eth_type=eth_pkt.ethertype)
+                eth_dst=dst,
+                # eth_type=eth_pkt.ethertype
+            )
             self.add_flow(datapath, 1, match, [], 1)  # drop
