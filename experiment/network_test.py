@@ -5,7 +5,6 @@ from mininet.node import RemoteController
 from mininet.link import Intf
 from time import sleep as _sleep
 from sys import argv
-from mininet.cli import CLI
 
 ROOT = 'experiment/'
 AUTH_ROOT = ROOT + 'authenticator/'
@@ -106,13 +105,11 @@ def main(mac_address, interface):
     s1.cmd('mkdir -p ' + PCAP_LOGS)
     s1.cmd('mkdir -p ' + AUTH_LOGS)
 
-    # pcap(s1, name=interface, intf=interface)
     pcap(s1, name='openflow', intf='lo', port='1812')
     pcap(auth, name='freeradius', intf='lo')
     pcap(auth, name='sdn-hostapd')
     pcap(ied1)
     pcap(ied2)
-    # pcap(scada)
 
     mn.start()
 
@@ -121,22 +118,20 @@ def main(mac_address, interface):
     s1.setARP('10.0.0.4', '00:00:00:00:00:04')
     s1.setARP('10.0.0.5', '00:00:00:00:00:05')
     s1.setARP('10.0.0.2', '00:00:00:00:00:02')
-    # auth won't connect to local interf if I set the ARP
-    auth.setARP('10.0.0.1', mac_address)  # somehow it did
+    auth.setARP('10.0.0.1', mac_address)
     pcap(s1, name='controller', intf='s1', port='53')
 
     freeradius(auth)
     hostapd(auth)
 
     ied1.cmd('experiment/ieds/./server_ied_pub', ied1.intf(), '&')
-    wpa(ied1)
-    sleep(.1)
-    # wpa_cli(ied1, 'ied_server_pub.sh', 'ied_server_pub')
-
     ied2.cmd('experiment/ieds/./server_ied_sub', ied2.intf(), '&')
+
+    wpa(ied1)
+
+    sleep(5)
+
     wpa(ied2)
-    # sleep(.1)
-    # wpa_cli(ied2, 'ied_server_sub.sh', 'ied_server_sub')
 
     # CLI(mn)
 
