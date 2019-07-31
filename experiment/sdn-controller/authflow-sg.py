@@ -22,7 +22,6 @@ from ryu.controller import dpset
 from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
-from ryu.lib import ofctl_v1_3
 from ryu.app.wsgi import ControllerBase
 from ryu.app.wsgi import Response
 from ryu.app.wsgi import WSGIApplication
@@ -34,11 +33,9 @@ from abac import guard
 from vakt import Inquiry
 from mms_client import Mms
 from ryu import cfg
-from ryu.ofproto.ether import ETH_TYPE_IP, ETH_TYPE_ARP
+from ryu.ofproto.ether import ETH_TYPE_IP
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
-
-supported_ofctl = {ofproto_v1_3.OFP_VERSION: ofctl_v1_3}
 
 MMS_IP = '10.0.0.1'
 MMS_TCP = 102
@@ -84,43 +81,41 @@ def add_authenticator_flow(datapath):
     datapath.send_msg(mod)
 
 
-def add_mms_to(datapath, mac, port, ip):
+def add_mms_flow(datapath, mac, ip, port=1):
     dpid = datapath.id
     ofproto = datapath.ofproto
     parser = datapath.ofproto_parser
-    actions = [parser.OFPActionOutput(port)]
-    match = parser.OFPMatch(
+
+    inst_to = [parser.OFPInstructionActions(
+        ofproto.OFPIT_APPLY_ACTIONS,
+        [parser.OFPActionOutput(port)])]
+    match_to = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
         in_port=MMS_CONTROLLER[dpid], eth_src=CONTROLLER_MAC,
         eth_dst=mac, ipv4_src=MMS_IP, ipv4_dst=ip, tcp_dst=MMS_TCP)
 
-    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-    mod = parser.OFPFlowMod(
-        datapath=datapath, priority=3,
-        match=match, instructions=inst,
-        command=ofproto.OFPFC_ADD)
-    datapath.send_msg(mod)
-
-
-def add_mms_from(datapath, mac, port, ip):
-    dpid = datapath.id
-    ofproto = datapath.ofproto
-    parser = datapath.ofproto_parser
-    actions = [parser.OFPActionOutput(MMS_CONTROLLER[dpid])]
-    match = parser.OFPMatch(
+    inst_from = [parser.OFPInstructionActions(
+        ofproto.OFPIT_APPLY_ACTIONS,
+        [parser.OFPActionOutput(MMS_CONTROLLER[dpid])])]
+    match_from = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
         in_port=port, eth_src=mac, eth_dst=CONTROLLER_MAC,
         ipv4_src=ip, ipv4_dst=MMS_IP, tcp_src=MMS_TCP)
 
-    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
     mod = parser.OFPFlowMod(
         datapath=datapath, priority=3,
-        match=match, instructions=inst,
+        match=match_to, instructions=inst_to,
+        command=ofproto.OFPFC_ADD)
+    datapath.send_msg(mod)
+
+    mod = parser.OFPFlowMod(
+        datapath=datapath, priority=3,
+        match=match_from, instructions=inst_from,
         command=ofproto.OFPFC_ADD)
     datapath.send_msg(mod)
 
 
-def add_goose(datapath, mac, group, in_port, out_port):
+def add_goose_flow(datapath, mac, group, in_port, out_port):
     ofproto = datapath.ofproto
     parser = datapath.ofproto_parser
     actions = [parser.OFPActionOutput(out_port)]
@@ -146,32 +141,30 @@ class StatsController(ControllerBase):
 
     def auth_user(self, req, mac, identity, **_kwargs):
         LOG.info('>>> New authentication (%s, %s)' % (identity, mac))
-        LOG.debug('>>> Installing MMS flows...')
         ip = IEDS[identity]['ip']
         port = IEDS[identity]['port']
-        add_mms_to(self.s1, mac, 1, ip)
-        add_mms_to(self.s2, mac, port, ip)
-        add_mms_from(self.s1, mac, 1, ip)
-        add_mms_from(self.s2, mac, port, ip)
+        LOG.debug('>>> Installing MMS flows...')
+        add_mms_flow(self.s1, mac, ip)
+        add_mms_flow(self.s2, mac, ip, port)
 
         LOG.debug('>>> Connecting to IED')
         with Mms(ip) as ied:
-            goose_group = ied.read_goose_group()
-            LOG.debug('>>> GOOSE group ' + str(goose_group))
+            publish_goose_to = ied.read_goose_group()
+            LOG.debug('>>> Publish GOOSE group to ' + str(publish_goose_to))
 
         LOG.debug('>>> Inquiring ABAC')
         publish_goose = Inquiry(
-            action={'type': 'publish', 'dest': goose_group},
+            action={'type': 'publish', 'dest': publish_goose_to},
             resource='GOOSE', subject=identity)
 
         if guard.is_allowed(publish_goose):
             self.authenticated[mac] = {'address': mac, 'identity': identity}
-            if goose_group in self.authenticated:
-                add_goose(
-                    self.s2, self.authenticated[goose_group]['address'],
-                    goose_group, 2, IEDS[identity]['port'])
+            if publish_goose_to in self.authenticated:
+                add_goose_flow(
+                    self.s2, self.authenticated[publish_goose_to]['address'],
+                    publish_goose_to, 2, IEDS[identity]['port'])
             else:
-                self.authenticated[goose_group] = {
+                self.authenticated[publish_goose_to] = {
                     'address': mac, 'identity': identity}
             LOG.info(">>> {'AUTH-OK':" + str(self.authenticated[mac]) + '}')
             body = json.dumps(
@@ -290,10 +283,7 @@ class RestStatsApi(app_manager.RyuApp):
         eth_pkt = pkt.get_protocol(ethernet.ethernet)
         src = eth_pkt.src.lower()
         dst = eth_pkt.dst.lower()
-        if \
-                eth_pkt.ethertype == ETH_TYPE_8021X:
-                # eth_pkt.ethertype == ETH_TYPE_8021X or \
-                # (src in self.authenticated and dst in self.authenticated):
+        if eth_pkt.ethertype == ETH_TYPE_8021X:
             LOG.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
