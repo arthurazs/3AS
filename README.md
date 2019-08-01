@@ -5,8 +5,9 @@ This guide works on xUbuntu 18.04.
 ## Pre-Install
 
 ```bash
-apt install mininet freeradius python-pip
-pip install ryu
+apt install mininet freeradius python3-pip
+pip3 install ryu
+pip3 install vakt
 sed -i '$ a export PATH=$PATH:~/.local/bin' ~/.bashrc
 source ~/.bashrc
 ```
