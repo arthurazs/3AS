@@ -129,7 +129,7 @@ def main(mac_address, interface):
 
     wpa(ied1)
 
-    sleep(5)
+    sleep(10)
 
     wpa(ied2)
 
