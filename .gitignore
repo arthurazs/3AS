@@ -16,3 +16,7 @@ index.txt*
 passwords.mk
 serial
 serial.old
+
+# graphs
+*.png
+*.csv
