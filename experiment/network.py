@@ -35,10 +35,10 @@ def wpa(node):
     node.cmdPrint(command, config, log)
 
 
-def wpa_cli(node, script):
+def wpa_cli(node, script, name):
     command = 'wpa_cli -i ' + str(node.intf())
     filename = '-a ' + IEDS_ROOT + script
-    log = '> ' + AUTH_LOGS + 'ping.log 2>&1 &'
+    log = '> ' + AUTH_LOGS + name + '.log 2>&1 &'
     node.cmdPrint(command, filename, log)
 
 
@@ -63,15 +63,17 @@ class Topology(Topo):
         Topo.__init__(self)
 
         auth = self.addHost('auth', ip='10.0.0.2', mac='00:00:00:00:00:02')
-        scada = self.addHost('scada', ip='10.0.0.3', mac='00:00:00:00:00:03')
-        ev = self.addHost('ev', ip='10.0.0.4', mac='00:00:00:00:00:04')
+        # scada = self.addHost('scada', ip='10.0.0.3', mac='00:00:00:00:00:03')
+        ied1 = self.addHost('ied1', ip='10.0.0.4', mac='00:00:00:00:00:04')
+        ied2 = self.addHost('ied2', ip='10.0.0.5', mac='00:00:00:00:00:05')
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
         self.addLink(s1, s2, 1, 1)
         self.addLink(s1, auth, 3, 0)
-        self.addLink(s1, scada, 4, 0)
-        self.addLink(s2, ev, 2, 0)
+        # self.addLink(s1, scada, 4, 0)
+        self.addLink(s2, ied1, 2, 0)
+        self.addLink(s2, ied2, 3, 0)
 
 
 def main(mac_address, interface):
@@ -79,7 +81,8 @@ def main(mac_address, interface):
     mn = Mininet(  # TODO Test without static ARP
         topo=Topology(), autoStaticArp=True,
         controller=RemoteController('c0', ip='10.0.0.1', port=6653))
-    auth, scada, ev, s1, s2 = mn.get('auth', 'scada', 'ev', 's1', 's2')
+    auth, s1, s2 = mn.get('auth', 's1', 's2')
+    ied1, ied2 = mn.get('ied1', 'ied2')
 
     Intf(interface, node=s1, port=2)
     s1.cmd('rm -rf /var/run/wpa_supplicant')
@@ -96,33 +99,44 @@ def main(mac_address, interface):
         sw.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
         sw.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
 
+    ied1.setARP('10.0.0.1', mac_address)
+    ied2.setARP('10.0.0.1', mac_address)
+
     s1.cmd('mkdir -p ' + PCAP_LOGS)
     s1.cmd('mkdir -p ' + AUTH_LOGS)
 
-    # pcap(s1, name=interface, intf=interface)
     pcap(s1, name='openflow', intf='lo', port='1812')
-    pcap(auth, name='freeradius', intf='lo', port='6653')
+    pcap(auth, name='freeradius', intf='lo')
     pcap(auth, name='sdn-hostapd')
-    pcap(ev)
-    pcap(scada)
+    pcap(ied1)
+    pcap(ied2)
 
     mn.start()
 
-    # auth won't connect to local interf if I set the ARP
-    # auth.setARP('10.0.0.1', mac_address)
     s1.cmd('ifconfig ' + interface + ' 0.0.0.0')
     s1.cmd('ifconfig s1 10.0.0.1 netmask 255.0.0.0')
+    s1.setARP('10.0.0.4', '00:00:00:00:00:04')
+    s1.setARP('10.0.0.5', '00:00:00:00:00:05')
+    s1.setARP('10.0.0.2', '00:00:00:00:00:02')
+    auth.setARP('10.0.0.1', mac_address)
+    pcap(s1, name='controller', intf='s1', port='53')
 
     freeradius(auth)
     hostapd(auth)
 
-    wpa(ev)
-    wpa_cli(ev, 'ev_server.sh')
+    ied1.cmd('experiment/ieds/./server_ied_pub', ied1.intf(), '&')
+    ied2.cmd('experiment/ieds/./server_ied_sub', ied2.intf(), '&')
 
-    sleep(5)
+    wpa(ied1)
+    sleep(10)
+    wpa(ied2)
+
+    sleep(15)
     s1.cmdPrint('pkill -2 wpa_cli')
     s1.cmdPrint('pkill -2 wpa_supplicant')
+    sleep(2)
     s1.cmdPrint('pkill -2 hostapd')
+    sleep(2)
     s1.cmdPrint('pkill -2 freeradius')
     s1.cmdPrint('pkill -2 server_ied')
     s1.cmdPrint('ovs-ofctl dump-flows s1 > ' + LOGS + 's1.log')

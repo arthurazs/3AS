@@ -17,6 +17,7 @@ else
     sudo mn -c > logs/pre/mn_clean.log 2>&1
 
     echo ">>> Removing DNS"
+    # sudo dpkg --remove whoopsie  # ubuntu only
     sudo systemctl disable avahi-daemon > logs/pre/avahi_disable.log 2>&1
     sudo service avahi-daemon stop > logs/pre/avahi_stop.log 2>&1
 
@@ -27,7 +28,7 @@ else
     # sudo arp -s 10.0.0.2 00:00:00:00:00:02
 
     echo ">>> Running ryu"
-    ryu-manager --user-flags experiment/sdn-controller/flags.py experiment/sdn-controller/authflow-sg.py --mac_address $MAC --verbose > logs/authflow-sg.log 2>&1 &
+    ryu-manager --user-flags experiment/sdn-controller/flags.py experiment/sdn-controller/ares.py --mac_address $MAC --verbose > logs/authflow-sg.log 2>&1 &
     echo ">>> Running mininet"
     sudo python experiment/network.py $MAC $1 > logs/network.log 2>&1
 

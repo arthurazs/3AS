@@ -34,6 +34,7 @@ from vakt import Inquiry
 from mms_client import Mms
 from ryu import cfg
 from ryu.ofproto.ether import ETH_TYPE_IP
+from datetime import datetime
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
@@ -51,6 +52,10 @@ IEDS = {
     'ied02': {'ip': '10.0.0.5', 'port': 3}
 }
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
+
+
+def log(message):
+    LOG.info('%s %s' % (datetime.now(), message))
 
 
 def add_authenticator_flow(datapath):
@@ -140,19 +145,21 @@ class StatsController(ControllerBase):
         self.s2 = self.dpset.get(2)
 
     def auth_user(self, req, mac, identity, **_kwargs):
-        LOG.info('>>> New authentication (%s, %s)' % (identity, mac))
+        log('%s (%s) authenticated successfuly' % (identity, mac))
         ip = IEDS[identity]['ip']
         port = IEDS[identity]['port']
-        LOG.debug('>>> Installing MMS flows...')
+        log('Installing MMS flows (%s <-> controller)' % identity)
         add_mms_flow(self.s1, mac, ip)
         add_mms_flow(self.s2, mac, ip, port)
 
-        LOG.debug('>>> Connecting to IED')
+        log('Controller connecting to %s (MMS)' % identity)
         with Mms(ip) as ied:
             publish_goose_to = ied.read_goose_group()
-            LOG.debug('>>> Publish GOOSE group to ' + str(publish_goose_to))
+            log('%s wants to subscribe to GOOSE %s frames'
+                % (identity, publish_goose_to))
 
-        LOG.debug('>>> Inquiring ABAC')
+        log('ABAC: %s can subscribe GOOSE %s frames?'
+            % (identity, publish_goose_to))
         publish_goose = Inquiry(
             action={'type': 'publish', 'dest': publish_goose_to},
             resource='GOOSE', subject=identity)
@@ -160,18 +167,22 @@ class StatsController(ControllerBase):
         if guard.is_allowed(publish_goose):
             self.authenticated[mac] = {'address': mac, 'identity': identity}
             if publish_goose_to in self.authenticated:
+                log('%s permited to subscribe GOOSE %s frames'
+                    % (identity, publish_goose_to))
+                log('Installing flows requested by %s' % identity)
                 add_goose_flow(
                     self.s2, self.authenticated[publish_goose_to]['address'],
                     publish_goose_to, 2, IEDS[identity]['port'])
             else:
                 self.authenticated[publish_goose_to] = {
                     'address': mac, 'identity': identity}
-            LOG.info(">>> {'AUTH-OK':" + str(self.authenticated[mac]) + '}')
+            log('%s (%s) authorized to subscribe %s GOOSE frames'
+                % (identity, mac, publish_goose_to))
             body = json.dumps(
                 "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
             return Response(content_type='application/json', body=body)
         else:
-            LOG.info(">>> {'NOT-OK':" + str(self.authenticated[mac]) + '}')
+            log("{'NOT-OK':" + str(self.authenticated[mac]) + '}')
             return Response(status=400)
 
 
@@ -311,11 +322,11 @@ class RestStatsApi(app_manager.RyuApp):
             datapath.send_msg(out)
         else:
             unauthenticated = dst if src in self.authenticated else src
-            LOG.info(
-                '>>> ' + unauthenticated + ' is not authenticated\n'
-                '>>> s' + str(dpid) + ' DROP from ' + str(src) +
-                ' (port ' + str(in_port) + ') to ' + str(dst)
-            )
+            frame = 'GOOSE' if eth_pkt.ethertype == ETH_TYPE_GOOSE \
+                    else eth_pkt.ethertype
+            log('s%i: Drop %s %s (port %i) -> %s'
+                % (dpid, frame, src, in_port, dst))
+            log('REASON: %s is not authenticated' % unauthenticated)
             match = parser.OFPMatch(
                 in_port=in_port, eth_src=src,
                 eth_dst=dst,
