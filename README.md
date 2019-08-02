@@ -5,6 +5,7 @@ This guide works on xUbuntu 18.04.
 ## Pre-Install
 
 ```bash
+sudo dpkg --remove whoopsie
 apt install mininet freeradius python3-pip
 pip3 install ryu
 pip3 install vakt
