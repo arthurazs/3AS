@@ -1,5 +1,5 @@
 from matplotlib.pyplot import plot, annotate, legend, savefig
-from matplotlib.pyplot import ylim, xlabel, ylabel
+from matplotlib.pyplot import xlim, ylim, xlabel, ylabel, subplots_adjust
 from matplotlib import rc, rcParams
 from csv import reader
 from itertools import islice
@@ -23,11 +23,14 @@ def fix_start_end(time_list, bytes_list, ending_list):
     bytes_list.append(0)
 
 
-rcParams['font.size'] = 12
-rcParams['figure.figsize'] = [9.0, 4.5]
+# rcParams['font.family'] = 'Times New Roman'
+rcParams['font.size'] = '20'
+rcParams['figure.figsize'] = [20, 5]
+subplots_adjust(left=.06, bottom=.14, right=.98, top=.97)
 rc('savefig', dpi=300, format='png')
 rc('axes', autolimit_mode='round_numbers', xmargin=0, ymargin=0)
 ylim(top=1.5)
+xlim(1.5, 20)
 xlabel('Time(s)')
 ylabel('KBytes/s')
 # tshark -r logs/pcap/ied2.pcap -T fields -e frame.time_epoch -e frame.len \
@@ -39,24 +42,24 @@ time_auth, kbytes_auth = [], []
 time_abac, kbytes_abac = [], []
 start_time = None
 
-with open('logs/ied1.csv') as csv_file:
+with open('experiment1/logs/ied1.csv') as csv_file:
     ied1 = reader(csv_file, delimiter=',')
 
     for row in islice(ied1, 1, None):  # skip header
         if row[2] != 'GOOSE':
-            start_time = None
+            # start_time = None
             time_ied1 = []
             kbytes_ied1 = []
         else:
             if not start_time:
-                start_time = float(row[0])
+                start_time = float(row[0]) + 2.1
             time = float(row[0]) - start_time
             if (time) <= 20:
                 kbytes = int(row[1]) / 1024
                 time_ied1.append(time)
                 kbytes_ied1.append(kbytes)
 
-with open('logs/ied2.csv') as csv_file:
+with open('experiment1/logs/ied2.csv') as csv_file:
     ied2 = reader(csv_file, delimiter=',')
 
     for row in islice(ied2, 1, None):  # skip header
@@ -73,34 +76,35 @@ with open('logs/ied2.csv') as csv_file:
                 time_auth.append(time)
                 kbytes_auth.append(kbytes)
 
+fix_start(time_ied1, kbytes_ied1)
 fix_start(time_ied2, kbytes_ied2)
 fix_start_end(time_auth, kbytes_auth, time_ied1)
 fix_start_end(time_abac, kbytes_abac, time_ied1)
 
 plot(
     time_ied1, kbytes_ied1, linestyle='--', marker=None,
-    label='GOOSE being sent by authorized IED1')
+    label='GOOSE sendo publicado pelo IED1 autorizado')
 plot(
     time_auth, kbytes_auth, linestyle='-', marker='x',
-    label='IEEE 802.1X authentication by IED2')
+    label='Autenticação IEEE 802.1X pelo IED2')
 plot(
     time_abac, kbytes_abac, linestyle='-', marker='+',
-    label='MMS authorization process for IED2')
+    label='Processo de autorização por MMS do IED2')
 plot(
     time_ied2, kbytes_ied2, linestyle='-', marker=None,
-    label='GOOSE being received by IED2')
+    label='GOOSE sendo recebido pelo IED2')
 
 annotate(
-    'IED2 is authorized', xy=(9.6, .25), xytext=(4, .51),
+    'IED2 é autorizado', xy=(11.05, .25), xytext=(9, .6),
     bbox=dict(boxstyle="round4", fc="w", facecolor='gray'),
     arrowprops=dict(facecolor='gray', arrowstyle='->'),
 )
 
 annotate(
-    'IED2 starts receiving GOOSE', xy=(10, .25), xytext=(10.4, .4),
+    'IED2 começa a receber GOOSE', xy=(11.4, .25), xytext=(11, .4),
     bbox=dict(boxstyle="round4", fc="w", facecolor='gray'),
     arrowprops=dict(facecolor='gray', arrowstyle='->'),
 )
 
 legend()
-savefig('logs/subscribing.png')
+savefig('experiment1/subscribing.png')
