@@ -28,9 +28,9 @@ else
     # sudo arp -s 10.0.0.2 00:00:00:00:00:02
 
     echo ">>> Running ryu"
-    ryu-manager --user-flags experiment/sdn-controller/flags.py experiment/sdn-controller/ares.py --mac_address $MAC --verbose > logs/authflow-sg.log 2>&1 &
+    ryu-manager --user-flags experiment/sdn-controller/flags.py experiment/sdn-controller/ares.py --mac_address $MAC --verbose > logs/ares.log 2>&1 &
     echo ">>> Running mininet"
-    sudo python experiment/network.py $MAC $1 > logs/network.log 2>&1
+    sudo python experiment/network_abac.py $MAC $1 > logs/network.log 2>&1
 
     # kill pox
     echo ">>> Killing ryu"

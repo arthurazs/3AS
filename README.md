@@ -41,6 +41,12 @@ eap {
 }
 ```
 
+Head over to the file `/etc/freeradius/3.0/users` and add the following line to the top of the file:
+
+```bash
+ied02 Cleartext-Password := "ied02"
+```
+
 ## Run
 
 Find the name of your local NIC, e.g.
