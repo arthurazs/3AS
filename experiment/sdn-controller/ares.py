@@ -154,7 +154,7 @@ class StatsController(ControllerBase):
 
         log('Controller connecting to %s (MMS)' % identity)
         with Mms(ip) as ied:
-            publish_goose_to = ied.read_goose_group()
+            publish_goose_to = ied.read()
             log('%s wants to subscribe to GOOSE %s frames'
                 % (identity, publish_goose_to))
 
