@@ -146,7 +146,8 @@ class StatsController(ControllerBase):
 
     def auth_user(self, req, mac, identity, **_kwargs):
         # TODO Remove flow after being unauthenticated
-        if identity != 'AUTH_NOT':
+        # TODO Investigate the use of diffie-hellman
+        if identity != 'AUTH-NOT':
             log('%s (%s) authenticated successfuly' % (identity, mac))
             ip = IEDS[identity]['ip']
             port = IEDS[identity]['port']
