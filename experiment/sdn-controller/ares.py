@@ -145,45 +145,51 @@ class StatsController(ControllerBase):
         self.s2 = self.dpset.get(2)
 
     def auth_user(self, req, mac, identity, **_kwargs):
-        log('%s (%s) authenticated successfuly' % (identity, mac))
-        ip = IEDS[identity]['ip']
-        port = IEDS[identity]['port']
-        log('Installing MMS flows (%s <-> controller)' % identity)
-        add_mms_flow(self.s1, mac, ip)
-        add_mms_flow(self.s2, mac, ip, port)
+        # TODO Remove flow after being unauthenticated
+        if identity != 'AUTH_NOT':
+            log('%s (%s) authenticated successfuly' % (identity, mac))
+            ip = IEDS[identity]['ip']
+            port = IEDS[identity]['port']
+            log('Installing MMS flows (%s <-> controller)' % identity)
+            add_mms_flow(self.s1, mac, ip)
+            add_mms_flow(self.s2, mac, ip, port)
 
-        log('Controller connecting to %s (MMS)' % identity)
-        with Mms(ip) as ied:
-            publish_goose_to = ied.read()
-            log('%s wants to subscribe to GOOSE %s frames'
-                % (identity, publish_goose_to))
-
-        log('ABAC: %s can subscribe GOOSE %s frames?'
-            % (identity, publish_goose_to))
-        publish_goose = Inquiry(
-            action={'type': 'publish', 'dest': publish_goose_to},
-            resource='GOOSE', subject=identity)
-
-        if guard.is_allowed(publish_goose):
-            self.authenticated[mac] = {'address': mac, 'identity': identity}
-            if publish_goose_to in self.authenticated:
-                log('%s permited to subscribe GOOSE %s frames'
+            log('Controller connecting to %s (MMS)' % identity)
+            with Mms(ip) as ied:
+                # TODO create second read for the sub
+                publish_goose_to = ied.read()
+                # TODO fix messages
+                log('%s wants to subscribe to GOOSE %s frames'
                     % (identity, publish_goose_to))
-                log('Installing flows requested by %s' % identity)
-                add_goose_flow(
-                    self.s2, self.authenticated[publish_goose_to]['address'],
-                    publish_goose_to, 2, IEDS[identity]['port'])
-            else:
-                self.authenticated[publish_goose_to] = {
+
+            log('ABAC: %s can subscribe GOOSE %s frames?'
+                % (identity, publish_goose_to))
+            publish_goose = Inquiry(
+                action={'type': 'publish', 'dest': publish_goose_to},
+                resource='GOOSE', subject=identity)
+
+            if guard.is_allowed(publish_goose):
+                self.authenticated[mac] = {
                     'address': mac, 'identity': identity}
-            log('%s (%s) authorized to subscribe %s GOOSE frames'
-                % (identity, mac, publish_goose_to))
-            body = json.dumps(
-                "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
-            return Response(content_type='application/json', body=body)
-        else:
-            log("{'NOT-OK':" + str(self.authenticated[mac]) + '}')
-            return Response(status=400)
+                if publish_goose_to in self.authenticated:
+                    log('%s permited to subscribe GOOSE %s frames'
+                        % (identity, publish_goose_to))
+                    log('Installing flows requested by %s' % identity)
+                    add_goose_flow(
+                        self.s2,
+                        self.authenticated[publish_goose_to]['address'],
+                        publish_goose_to, 2, IEDS[identity]['port'])
+                else:
+                    self.authenticated[publish_goose_to] = {
+                        'address': mac, 'identity': identity}
+                log('%s (%s) authorized to subscribe %s GOOSE frames'
+                    % (identity, mac, publish_goose_to))
+                body = json.dumps(
+                    "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
+                return Response(content_type='application/json', body=body)
+            else:
+                log("{'NOT-OK':" + str(self.authenticated[mac]) + '}')
+                return Response(status=400)
 
 
 class RestStatsApi(app_manager.RyuApp):
