@@ -20,10 +20,12 @@ source ~/.bashrc
 Download this repo and generate the certificates:
 
 ```bash
-git clone https://github.com/arthurazs/eva.git
-cd eva/experiment/certificates/configs
+git clone https://github.com/arthurazs/3AS.git
+cd 3AS/experiment/certificates/configs
 make
 ```
+
+---
 
 Head over to the file `/etc/freeradius/3.0/mods-enabled/eap` and **update** the following lines:
 
@@ -31,7 +33,7 @@ Head over to the file `/etc/freeradius/3.0/mods-enabled/eap` and **update** the 
 eap {
   default_eap_type = tls
   tls-config tls-common {
-    home_certs = '/<WHEREVER THIS REPO IS>/eva/experiment/certificates'
+    home_certs = '/<WHEREVER THIS REPO IS>/3AS/experiment/certificates'
     private_key_password = icuff
     private_key_file = ${home_certs}/radius/server.key
     certificate_file = ${home_certs}/radius/server.pem
@@ -40,6 +42,10 @@ eap {
   }
 }
 ```
+
+**WARNING**: Do not forget to change `/<WHEREVER THIS REPO IS>/` to the full path you downloaded/cloned this repo, *e.g.*, `home_certs = '/home/arthurazs/git/3AS/experiment/certificates'`.
+
+---
 
 Head over to the file `/etc/freeradius/3.0/users` and add the following line to the top of the file:
 
@@ -70,10 +76,12 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-And use that NIC to run the experiments:
+---
+
+Use the NIC found to run the experiments:
 
 ```bash
-cd eva
+cd 3AS
 sh run.sh enp0s3
 ```
 
