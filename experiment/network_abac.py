@@ -2,9 +2,8 @@ from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.log import setLogLevel, lg as logger
 from mininet.node import RemoteController
-from mininet.link import Intf
 from time import sleep as _sleep
-from sys import argv
+
 
 ROOT = 'experiment/'
 AUTH_ROOT = ROOT + 'authenticator/'
@@ -70,21 +69,20 @@ class Topology(Topo):
         s2 = self.addSwitch('s2')
 
         self.addLink(s1, s2, 1, 1)
-        self.addLink(s1, auth, 3, 0)
-        # self.addLink(s1, scada, 4, 0)
+        self.addLink(s1, auth, 2, 0)
+        # self.addLink(s1, scada, 3, 0)
         self.addLink(s2, ied1, 2, 0)
         self.addLink(s2, ied2, 3, 0)
 
 
-def main(mac_address, interface):
+def main():
     # app.exe > ../logs/save_to.log 2>&1 &
     mn = Mininet(  # TODO Test without static ARP
         topo=Topology(), autoStaticArp=True,
-        controller=RemoteController('c0', ip='10.0.0.1', port=6653))
+        controller=RemoteController('c0', ip='127.0.0.1', port=6653))
     auth, s1, s2 = mn.get('auth', 's1', 's2')
     ied1, ied2 = mn.get('ied1', 'ied2')
 
-    Intf(interface, node=s1, port=2)
     s1.cmd('rm -rf /var/run/wpa_supplicant')
 
     logger.info("*** Disabling hosts ipv6\n")
@@ -99,8 +97,8 @@ def main(mac_address, interface):
         sw.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
         sw.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
 
-    ied1.setARP('10.0.0.1', mac_address)
-    ied2.setARP('10.0.0.1', mac_address)
+    ied1.setARP('10.0.0.1', '00:00:00:00:00:01')
+    ied2.setARP('10.0.0.1', '00:00:00:00:00:01')
 
     s1.cmd('mkdir -p ' + PCAP_LOGS)
     s1.cmd('mkdir -p ' + AUTH_LOGS)
@@ -113,12 +111,12 @@ def main(mac_address, interface):
 
     mn.start()
 
-    s1.cmd('ifconfig ' + interface + ' 0.0.0.0')
     s1.cmd('ifconfig s1 10.0.0.1 netmask 255.0.0.0')
+    s1.cmd('ovs-vsctl set bridge s1 other-config:hwaddr=00:00:00:00:00:01')
     s1.setARP('10.0.0.4', '00:00:00:00:00:04')
     s1.setARP('10.0.0.5', '00:00:00:00:00:05')
     s1.setARP('10.0.0.2', '00:00:00:00:00:02')
-    auth.setARP('10.0.0.1', mac_address)
+    auth.setARP('10.0.0.1', '00:00:00:00:00:01')
     pcap(s1, name='controller', intf='s1', port='53')
 
     freeradius(auth)
@@ -149,4 +147,4 @@ def main(mac_address, interface):
 
 if __name__ == '__main__':
     setLogLevel('debug')
-    main(argv[1], argv[2])
+    main()

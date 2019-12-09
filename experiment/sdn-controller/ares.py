@@ -32,7 +32,6 @@ from ryu.lib.packet import ethernet
 from abac import guard
 from vakt import Inquiry
 from mms_client import Mms
-from ryu import cfg
 from ryu.ofproto.ether import ETH_TYPE_IP
 from datetime import datetime
 
@@ -45,7 +44,7 @@ ETH_TYPE_GOOSE = 0x88B8
 EAPOL_MAC = u'01:80:c2:00:00:03'
 SCADA_MAC = u'00:00:00:00:00:03'
 BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
-CONTROLLER_MAC = cfg.CONF.mac_address
+CONTROLLER_MAC = u'00:00:00:00:00:01'
 
 IEDS = {
     'ied01': {'ip': '10.0.0.4', 'port': 2},
@@ -65,10 +64,10 @@ def add_authenticator_flow(datapath):
     inst_to = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
         parser.OFPActionOutput(ofproto_v1_3.OFPP_LOCAL)])]
     match_to = parser.OFPMatch(
-        in_port=3, eth_src='00:00:00:00:00:02', eth_dst=CONTROLLER_MAC)
+        in_port=2, eth_src='00:00:00:00:00:02', eth_dst=CONTROLLER_MAC)
 
     inst_from = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
-        parser.OFPActionOutput(3)])]
+        parser.OFPActionOutput(2)])]
     match_from = parser.OFPMatch(
         in_port=ofproto_v1_3.OFPP_LOCAL, eth_dst='00:00:00:00:00:02',
         eth_src=CONTROLLER_MAC)
@@ -232,10 +231,10 @@ class RestStatsApi(app_manager.RyuApp):
         # known hosts
         self.mac_to_port = {
             1: {
-                EAPOL_MAC: 3,               # s1, EAPOL to port 3
-                '00:00:00:00:00:02': 3,     # s1, EAPOL to port 3
-                CONTROLLER_MAC: 2,          # s1, LOCAL to port 2
-                SCADA_MAC: 4,               # s1, SCADA to port 4
+                EAPOL_MAC: 2,               # s1, EAPOL to port 2
+                '00:00:00:00:00:02': 2,     # s1, AUTH  to port 2
+                CONTROLLER_MAC: ofproto_v1_3.OFPP_LOCAL,
+                SCADA_MAC: 3,               # s1, SCADA to port 3
             },
             2: {
                 EAPOL_MAC: 1,               # s2, EAPOL to port 1
