@@ -37,7 +37,7 @@ from datetime import datetime
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
-MMS_IP = '10.0.0.1'
+MMS_IP = '10.0.1.1'
 MMS_TCP = 102
 ETH_TYPE_8021X = 0x888E
 ETH_TYPE_GOOSE = 0x88B8
@@ -47,8 +47,8 @@ BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = u'00:00:00:00:00:01'
 
 IEDS = {
-    'ied01': {'ip': '10.0.0.4', 'port': 2},
-    'ied02': {'ip': '10.0.0.5', 'port': 3}
+    'ied01': {'ip': '10.0.1.4', 'port': 2},
+    'ied02': {'ip': '10.0.1.5', 'port': 3}
 }
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
 

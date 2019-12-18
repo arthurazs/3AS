@@ -61,10 +61,10 @@ class Topology(Topo):
     def __init__(self):
         Topo.__init__(self)
 
-        auth = self.addHost('auth', ip='10.0.0.2', mac='00:00:00:00:00:02')
-        # scada = self.addHost('scada', ip='10.0.0.3', mac='00:00:00:00:00:03')
-        ied1 = self.addHost('ied1', ip='10.0.0.4', mac='00:00:00:00:00:04')
-        ied2 = self.addHost('ied2', ip='10.0.0.5', mac='00:00:00:00:00:05')
+        auth = self.addHost('auth', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
+        # scada = self.addHost('scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
+        ied1 = self.addHost('ied1', ip='10.0.1.4/24', mac='00:00:00:00:00:04')
+        ied2 = self.addHost('ied2', ip='10.0.1.5/24', mac='00:00:00:00:00:05')
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
@@ -97,8 +97,8 @@ def main():
         sw.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
         sw.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
 
-    ied1.setARP('10.0.0.1', '00:00:00:00:00:01')
-    ied2.setARP('10.0.0.1', '00:00:00:00:00:01')
+    ied1.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ied2.setARP('10.0.1.1', '00:00:00:00:00:01')
 
     s1.cmd('mkdir -p ' + PCAP_LOGS)
     s1.cmd('mkdir -p ' + AUTH_LOGS)
@@ -111,12 +111,12 @@ def main():
 
     mn.start()
 
-    s1.cmd('ifconfig s1 10.0.0.1 netmask 255.0.0.0')
+    s1.cmd('ifconfig s1 10.0.1.1 netmask 255.255.255.0')
     s1.cmd('ovs-vsctl set bridge s1 other-config:hwaddr=00:00:00:00:00:01')
-    s1.setARP('10.0.0.4', '00:00:00:00:00:04')
-    s1.setARP('10.0.0.5', '00:00:00:00:00:05')
-    s1.setARP('10.0.0.2', '00:00:00:00:00:02')
-    auth.setARP('10.0.0.1', '00:00:00:00:00:01')
+    s1.setARP('10.0.1.4', '00:00:00:00:00:04')
+    s1.setARP('10.0.1.5', '00:00:00:00:00:05')
+    s1.setARP('10.0.1.2', '00:00:00:00:00:02')
+    auth.setARP('10.0.1.1', '00:00:00:00:00:01')
     pcap(s1, name='controller', intf='s1', port='53')
 
     freeradius(auth)
