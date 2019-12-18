@@ -6,9 +6,20 @@ storage = vakt.MemoryStorage()
 
 policy = vakt.Policy(
     str(uuid.uuid4()),
-    subjects=[Or(Eq('ied01'), Eq('ied02'))],
+    subjects=[Eq('ied01')],
     actions=[{
-        'type': Or(Eq('publish'), Eq('subscribe')),
+        'type': Or(Eq('publish')),
+        'dest': Eq('01:0c:cd:01:00:01')}],
+    resources=[Eq('GOOSE')],
+    effect=vakt.ALLOW_ACCESS,
+)
+storage.add(policy)
+
+policy = vakt.Policy(
+    str(uuid.uuid4()),
+    subjects=[Eq('ied02')],
+    actions=[{
+        'type': Or(Eq('subscribe')),
         'dest': Eq('01:0c:cd:01:00:01')}],
     resources=[Eq('GOOSE')],
     effect=vakt.ALLOW_ACCESS,
@@ -25,9 +36,3 @@ policy = vakt.Policy(
 storage.add(policy)
 
 guard = vakt.Guard(storage, vakt.RulesChecker())
-
-# inq = vakt.Inquiry(action={'type': 'publish', 'dest': '01:0c:cd:01:00:01'},
-#                    resource='GOOSE',
-#                    subject='ied01')
-
-# assert guard.is_allowed(inq)

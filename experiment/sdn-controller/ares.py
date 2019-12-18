@@ -144,52 +144,69 @@ class StatsController(ControllerBase):
         self.s2 = self.dpset.get(2)
 
     def auth_user(self, req, mac, identity, **_kwargs):
-        # TODO Remove flow after being unauthenticated
         # TODO Investigate the use of diffie-hellman
-        if identity != 'AUTH-NOT':
-            log('%s (%s) authenticated successfuly' % (identity, mac))
-            ip = IEDS[identity]['ip']
-            port = IEDS[identity]['port']
-            log('Installing MMS flows (%s <-> controller)' % identity)
-            add_mms_flow(self.s1, mac, ip)
-            add_mms_flow(self.s2, mac, ip, port)
+        log('%s (%s) authenticated successfuly' % (identity, mac))
+        ip = IEDS[identity]['ip']
+        port = IEDS[identity]['port']
+        log('Installing MMS flows (%s <-> controller)' % identity)
+        add_mms_flow(self.s1, mac, ip)
+        add_mms_flow(self.s2, mac, ip, port)
 
-            log('Controller connecting to %s (MMS)' % identity)
-            with Mms(ip) as ied:
-                # TODO create second read for the sub
-                publish_goose_to = ied.read()
-                # TODO fix messages
-                log('%s wants to subscribe to GOOSE %s frames'
-                    % (identity, publish_goose_to))
-
-            log('ABAC: %s can subscribe GOOSE %s frames?'
-                % (identity, publish_goose_to))
-            publish_goose = Inquiry(
-                action={'type': 'publish', 'dest': publish_goose_to},
-                resource='GOOSE', subject=identity)
-
-            if guard.is_allowed(publish_goose):
-                self.authenticated[mac] = {
-                    'address': mac, 'identity': identity}
-                if publish_goose_to in self.authenticated:
-                    log('%s permited to subscribe GOOSE %s frames'
-                        % (identity, publish_goose_to))
-                    log('Installing flows requested by %s' % identity)
-                    add_goose_flow(
-                        self.s2,
-                        self.authenticated[publish_goose_to]['address'],
-                        publish_goose_to, 2, IEDS[identity]['port'])
-                else:
-                    self.authenticated[publish_goose_to] = {
-                        'address': mac, 'identity': identity}
-                log('%s (%s) authorized to subscribe %s GOOSE frames'
-                    % (identity, mac, publish_goose_to))
-                body = json.dumps(
-                    "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
-                return Response(content_type='application/json', body=body)
+        log('Controller connecting to %s (MMS)' % identity)
+        with Mms(ip) as ied:
+            # TODO create second read for the sub
+            publish_goose_to = ied.read()
+            # TODO fix messages
+            if publish_goose_to in self.authenticated:
+                action = 'subscribe'
             else:
-                log("{'NOT-OK':" + str(self.authenticated[mac]) + '}')
-                return Response(status=400)
+                action = 'publish'
+            log('%s wants to %s GOOSE %s frames'
+                % (identity, action, publish_goose_to))
+
+        log('ABAC: can %s %s GOOSE %s frames?'
+            % (identity, action, publish_goose_to))
+        publish_goose = Inquiry(
+            action={'type': action, 'dest': publish_goose_to},
+            resource='GOOSE', subject=identity)
+
+        if guard.is_allowed(publish_goose):
+            self.authenticated[mac] = {
+                'address': mac, 'identity': identity}
+            if publish_goose_to in self.authenticated:
+                log('%s permited to subscribe GOOSE %s frames'
+                    % (identity, publish_goose_to))
+                log('Installing flows requested by %s' % identity)
+                add_goose_flow(
+                    self.s2,
+                    self.authenticated[publish_goose_to]['address'],
+                    publish_goose_to, 2, IEDS[identity]['port'])
+            else:
+                self.authenticated[publish_goose_to] = {
+                    'address': mac, 'identity': identity}
+            log('%s (%s) authorized to subscribe %s GOOSE frames'
+                % (identity, mac, publish_goose_to))
+            body = json.dumps(
+                "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
+            return Response(content_type='application/json', body=body)
+        else:
+            # TODO Fix hostapd to send Failure to supp if NOT-OK
+            log("{'NOT-OK': 'Access not granted'}")
+            return Response(status=400)
+
+    def deauth_user(self, req, mac, **_kwargs):
+        if mac in self.authenticated:
+            unauthenticated = self.authenticated[mac]
+            identity = unauthenticated['identity']
+            del self.authenticated[mac]
+            log('%s (%s) deauthenticated successfuly' % (identity, mac))
+            log('Removing flows requested by %s' % identity)
+            # TODO Remove flow after being unauthenticated
+            body = json.dumps(
+                "{'AUTH-NOT':" + str(unauthenticated) + '}')
+            return Response(content_type='application/json', body=body)
+        log("{'NOT-OK': 'MAC not found'}")
+        return Response(status=400)
 
 
 class RestStatsApi(app_manager.RyuApp):
@@ -251,6 +268,11 @@ class RestStatsApi(app_manager.RyuApp):
         uri = '/authenticated/{mac}/{identity}'
         mapper.connect('stats', uri,
                        controller=StatsController, action='auth_user',
+                       conditions=dict(method=['GET']))
+
+        uri = '/deauthenticated/{mac}'
+        mapper.connect('stats', uri,
+                       controller=StatsController, action='deauth_user',
                        conditions=dict(method=['GET']))
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
