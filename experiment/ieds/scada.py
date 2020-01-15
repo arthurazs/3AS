@@ -5,24 +5,24 @@ async def handle_echo(stream_in, stream_out):
     addr = stream_out.get_extra_info('peername')
 
     data = 'read->ChargingLD/DRCT.Comm.func'
-    print(f"Send: {data}")
+    print(f"{addr} >>> Sent: {data}")
     stream_out.write(data.encode())
     await stream_out.drain()
 
     data = await stream_in.read(100)
     message = data.decode()
-    print(f"Received: {message} {addr}")
+    print(f"{addr} >>> Received: {message}")
 
     data = 'write->BatteryLD/ZBTC.BatChaSt.setVal->2'  # charge
-    print(f"Send: {data}")
+    print(f"{addr} >>> Sent: {data}")
     stream_out.write(data.encode())
     await stream_out.drain()
 
     data = await stream_in.read(100)
     message = data.decode()
-    print(f"Received {message} from {addr}")
+    print(f"{addr} >>> Received: {message}")
 
-    # print("Close the client socket\n")
+    # print("Closing the client socket\n")
     # stream_out.close()
 
 loop = get_event_loop()

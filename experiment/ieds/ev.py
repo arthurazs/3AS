@@ -19,9 +19,10 @@ async def tcp_echo_client(loop):
     print(f'Send: {message}')
     stream_out.write(message.encode())
 
-    # print('Close the socket')
+    await asyncio.sleep(10)
+
+    # print('Closing the socket')
     # stream_out.close()
-    await asyncio.sleep(60)
 
 
 loop = asyncio.get_event_loop()

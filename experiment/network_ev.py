@@ -3,6 +3,7 @@ from mininet.net import Mininet
 from mininet.log import setLogLevel, lg as logger
 from mininet.node import RemoteController
 from time import sleep as _sleep
+# from mininet.cli import CLI
 
 
 ROOT = 'experiment/'
@@ -66,9 +67,9 @@ class Topology(Topo):
             'auth', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
         scada = self.addHost(
             'scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
+
         ev1 = self.addHost(
             'ev1', ip='10.0.1.4/24', mac='00:00:00:00:00:04')
-
         ev2 = self.addHost(
             'ev2', ip='10.0.1.5/24', mac='00:00:00:00:00:05')
         ev3 = self.addHost(
@@ -126,11 +127,11 @@ def main():
     s1.cmd('mkdir -p ' + AUTH_LOGS)
     s1.cmd('mkdir -p ' + MMS_LOGS)
 
-    pcap(s1, name='openflow', intf='lo', port='1812')
+    pcap(s1, name='openflow', intf='lo', port='1812 and port not 53')
     pcap(auth, name='freeradius', intf='lo')
     pcap(auth, name='sdn-hostapd')
     pcap(scada)
-    # pcap(ev1)
+    pcap(ev1)
 
     mn.start()
 
@@ -149,16 +150,9 @@ def main():
     freeradius(auth)
     hostapd(auth)
 
-    # scada.cmd('experiment/ieds/./server_ied_sub', scada.intf(), '&')
-    # ev1.cmd('experiment/ieds/./server_ied_pub', ev1.intf(), '&')
-
-    # app.exe > ../logs/save_to.log 2>&1 &
     scada.cmdPrint(
-        'python3 experiment/ieds/scada.py >',
-        MMS_LOGS + 'scada.log 2>&1 &')
-    # scada.cmdPrint(
-    #     'script -c "python3 experiment/ieds/scada.py"',
-    #     MMS_LOGS + 'scada.log &')
+        'screen -L -Logfile', MMS_LOGS + 'scada.log',
+        '-S scada -dm python3 experiment/ieds/scada.py')
 
     wpa(ev1)
     sleep(.1)
@@ -185,9 +179,7 @@ def main():
     # exit(0)
 
     sleep(15)
-    s1.cmdPrint('pkill -2 script')
-    # s1.cmdPrint('pkill -2 -f -n ev.py')
-    # s1.cmdPrint('pkill -2 -f scada.py')
+    s1.cmdPrint('screen -S scada -X quit')
     s1.cmdPrint('pkill -2 wpa_supplicant')
     sleep(2)
     s1.cmdPrint('pkill -2 hostapd')

@@ -289,7 +289,7 @@ class RestStatsApi(app_manager.RyuApp):
         src = eth_pkt.src.lower()
         dst = eth_pkt.dst.lower()
         if eth_pkt.ethertype == ETH_TYPE_8021X:
-            LOG.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+            LOG.info('802.1X packet in %s %s %s %s', dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
             self.mac_to_port[dpid][src] = in_port
@@ -304,7 +304,8 @@ class RestStatsApi(app_manager.RyuApp):
             # install a flow to avoid packet_in next time.
             if out_port != ofproto.OFPP_FLOOD:
                 match = parser.OFPMatch(
-                    in_port=in_port, eth_dst=dst, eth_type=eth_pkt.ethertype)
+                    in_port=in_port, eth_src=src,
+                    eth_dst=dst, eth_type=eth_pkt.ethertype)
                 self.add_flow(datapath, 2, match, actions)
 
             # construct packet_out message and send it.
