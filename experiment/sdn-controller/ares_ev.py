@@ -29,15 +29,12 @@ from ryu.app.wsgi import WSGIApplication
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 
-from abac import guard
-from vakt import Inquiry
-from mms_client import Mms
 from ryu.ofproto.ether import ETH_TYPE_IP
 from datetime import datetime
 
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
-MMS_IP = '10.0.1.1'
+MMS_IP = '10.0.1.3'
 MMS_TCP = 102
 ETH_TYPE_8021X = 0x888E
 ETH_TYPE_GOOSE = 0x88B8
@@ -48,10 +45,14 @@ CONTROLLER_MAC = u'00:00:00:00:00:01'
 
 IEDS = {
     'scada': {'ip': '10.0.1.3', 'port': 1},
-    'ied01': {'ip': '10.0.1.4', 'port': 2},
-    'ied02': {'ip': '10.0.1.5', 'port': 3}
+    'ev1': {'ip': '10.0.1.4', 'port': 2},
+    'ev2': {'ip': '10.0.1.5', 'port': 3},
+    'ev3': {'ip': '10.0.1.6', 'port': 4},
+    'ev4': {'ip': '10.0.1.7', 'port': 5},
+    'ev5': {'ip': '10.0.1.8', 'port': 6}
 }
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
+MMS_SCADA = {1: 3, 2: 1}
 
 
 def log(message):
@@ -96,16 +97,16 @@ def add_mms_flow(datapath, mac, ip, port=1):
         [parser.OFPActionOutput(port)])]
     match_to = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
-        in_port=MMS_CONTROLLER[dpid], eth_src=CONTROLLER_MAC,
-        eth_dst=mac, ipv4_src=MMS_IP, ipv4_dst=ip, tcp_dst=MMS_TCP)
+        in_port=MMS_SCADA[dpid], eth_src=SCADA_MAC,
+        eth_dst=mac, ipv4_src=MMS_IP, ipv4_dst=ip, tcp_src=MMS_TCP)
 
     inst_from = [parser.OFPInstructionActions(
         ofproto.OFPIT_APPLY_ACTIONS,
-        [parser.OFPActionOutput(MMS_CONTROLLER[dpid])])]
+        [parser.OFPActionOutput(MMS_SCADA[dpid])])]
     match_from = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
-        in_port=port, eth_src=mac, eth_dst=CONTROLLER_MAC,
-        ipv4_src=ip, ipv4_dst=MMS_IP, tcp_src=MMS_TCP)
+        in_port=port, eth_src=mac, eth_dst=SCADA_MAC,
+        ipv4_src=ip, ipv4_dst=MMS_IP, tcp_dst=MMS_TCP)
 
     mod = parser.OFPFlowMod(
         datapath=datapath, priority=3,
@@ -153,47 +154,11 @@ class StatsController(ControllerBase):
         add_mms_flow(self.s1, mac, ip)
         add_mms_flow(self.s2, mac, ip, port)
 
-        log('Controller connecting to %s (MMS)' % identity)
-        with Mms(ip) as ied:
-            # TODO create second read for the sub
-            publish_goose_to = ied.read()
-            # TODO fix messages
-            if publish_goose_to in self.authenticated:
-                action = 'subscribe'
-            else:
-                action = 'publish'
-            log('%s wants to %s GOOSE %s frames'
-                % (identity, action, publish_goose_to))
-
-        log('ABAC: can %s %s GOOSE %s frames?'
-            % (identity, action, publish_goose_to))
-        publish_goose = Inquiry(
-            action={'type': action, 'dest': publish_goose_to},
-            resource='GOOSE', subject=identity)
-
-        if guard.is_allowed(publish_goose):
-            self.authenticated[mac] = {
-                'address': mac, 'identity': identity}
-            if publish_goose_to in self.authenticated:
-                log('%s permited to subscribe GOOSE %s frames'
-                    % (identity, publish_goose_to))
-                log('Installing flows requested by %s' % identity)
-                add_goose_flow(
-                    self.s2,
-                    self.authenticated[publish_goose_to]['address'],
-                    publish_goose_to, 2, IEDS[identity]['port'])
-            else:
-                self.authenticated[publish_goose_to] = {
-                    'address': mac, 'identity': identity}
-            log('%s (%s) authorized to subscribe %s GOOSE frames'
-                % (identity, mac, publish_goose_to))
-            body = json.dumps(
-                "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
-            return Response(content_type='application/json', body=body)
-        else:
-            # TODO Fix hostapd to send Failure to supp if NOT-OK
-            log("{'NOT-OK': 'Access not granted'}")
-            return Response(status=400)
+        self.authenticated[mac] = {
+            'address': mac, 'identity': identity}
+        body = json.dumps(
+            "{'AUTH-OK':" + str(self.authenticated[mac]) + '}')
+        return Response(content_type='application/json', body=body)
 
     def deauth_user(self, req, mac, **_kwargs):
         if mac in self.authenticated:

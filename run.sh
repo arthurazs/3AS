@@ -17,9 +17,12 @@ sudo systemctl disable avahi-daemon > logs/pre/avahi_disable.log 2>&1
 sudo service avahi-daemon stop > logs/pre/avahi_stop.log 2>&1
 
 echo ">>> Running ryu"
-ryu-manager experiment/sdn-controller/ares.py --verbose > logs/ares.log 2>&1 &
+ryu-manager experiment/sdn-controller/ares_ev.py --verbose > logs/ares.log 2>&1 &
 echo ">>> Running mininet"
-sudo python experiment/network_abac.py > logs/network.log 2>&1
+# sudo python experiment/network_ev.py
+sudo python experiment/network_ev.py > logs/network.log 2>&1
+echo ">>> Restarting Interfaces"
+# sudo service NetworkManager restart
 
 # kill pox
 echo ">>> Killing ryu"

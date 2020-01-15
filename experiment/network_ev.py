@@ -12,6 +12,7 @@ IEDS_ROOT = ROOT + 'ieds/'
 LOGS = 'logs/'
 AUTH_LOGS = LOGS + 'auth/'
 PCAP_LOGS = LOGS + 'pcap/'
+MMS_LOGS = LOGS + 'mms/'
 
 
 def hostapd(node):
@@ -37,7 +38,7 @@ def wpa(node):
 def wpa_cli(node, script, name):
     command = 'wpa_cli -i ' + str(node.intf())
     filename = '-a ' + IEDS_ROOT + script
-    log = '> ' + AUTH_LOGS + name + '.log 2>&1 &'
+    log = '> ' + MMS_LOGS + name + '.log 2>&1 &'
     node.cmdPrint(command, filename, log)
 
 
@@ -61,18 +62,34 @@ class Topology(Topo):
     def __init__(self):
         Topo.__init__(self)
 
-        auth = self.addHost('auth', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
-        # scada = self.addHost('scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
-        ied1 = self.addHost('ied1', ip='10.0.1.4/24', mac='00:00:00:00:00:04')
-        ied2 = self.addHost('ied2', ip='10.0.1.5/24', mac='00:00:00:00:00:05')
+        auth = self.addHost(
+            'auth', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
+        scada = self.addHost(
+            'scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
+        ev1 = self.addHost(
+            'ev1', ip='10.0.1.4/24', mac='00:00:00:00:00:04')
+
+        ev2 = self.addHost(
+            'ev2', ip='10.0.1.5/24', mac='00:00:00:00:00:05')
+        ev3 = self.addHost(
+            'ev3', ip='10.0.1.6/24', mac='00:00:00:00:00:06')
+        ev4 = self.addHost(
+            'ev4', ip='10.0.1.7/24', mac='00:00:00:00:00:07')
+        ev5 = self.addHost(
+            'ev5', ip='10.0.1.8/24', mac='00:00:00:00:00:08')
+
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
         self.addLink(s1, s2, 1, 1)
         self.addLink(s1, auth, 2, 0)
-        # self.addLink(s1, scada, 3, 0)
-        self.addLink(s2, ied1, 2, 0)
-        self.addLink(s2, ied2, 3, 0)
+        self.addLink(s1, scada, 3, 0)
+
+        self.addLink(s2, ev1, 2, 0)
+        self.addLink(s2, ev2, 3, 0)
+        self.addLink(s2, ev3, 4, 0)
+        self.addLink(s2, ev4, 5, 0)
+        self.addLink(s2, ev5, 6, 0)
 
 
 def main():
@@ -81,7 +98,8 @@ def main():
         topo=Topology(), autoStaticArp=True,
         controller=RemoteController('c0', ip='127.0.0.1', port=6653))
     auth, s1, s2 = mn.get('auth', 's1', 's2')
-    ied1, ied2 = mn.get('ied1', 'ied2')
+    scada, ev1, ev2, ev3, ev4, ev5 = mn.get(
+        'scada', 'ev1', 'ev2', 'ev3', 'ev4', 'ev5')
 
     s1.cmd('rm -rf /var/run/wpa_supplicant')
 
@@ -97,39 +115,79 @@ def main():
         sw.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
         sw.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
 
-    ied1.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ied2.setARP('10.0.1.1', '00:00:00:00:00:01')
+    scada.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ev1.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ev2.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ev3.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ev4.setARP('10.0.1.1', '00:00:00:00:00:01')
+    ev5.setARP('10.0.1.1', '00:00:00:00:00:01')
 
     s1.cmd('mkdir -p ' + PCAP_LOGS)
     s1.cmd('mkdir -p ' + AUTH_LOGS)
+    s1.cmd('mkdir -p ' + MMS_LOGS)
 
     pcap(s1, name='openflow', intf='lo', port='1812')
     pcap(auth, name='freeradius', intf='lo')
     pcap(auth, name='sdn-hostapd')
-    pcap(ied1)
-    pcap(ied2)
+    pcap(scada)
+    # pcap(ev1)
 
     mn.start()
 
     s1.cmd('ifconfig s1 10.0.1.1 netmask 255.255.255.0')
     s1.cmd('ovs-vsctl set bridge s1 other-config:hwaddr=00:00:00:00:00:01')
-    s1.setARP('10.0.1.4', '00:00:00:00:00:04')
-    s1.setARP('10.0.1.5', '00:00:00:00:00:05')
     s1.setARP('10.0.1.2', '00:00:00:00:00:02')
+    s1.setARP('10.0.1.3', '00:00:00:00:00:03')
+    s1.setARP('10.0.1.4', '00:00:00:00:00:04')
+    s1.setARP('10.0.1.5', '00:00:00:00:00:04')
+    s1.setARP('10.0.1.6', '00:00:00:00:00:04')
+    s1.setARP('10.0.1.7', '00:00:00:00:00:04')
+    s1.setARP('10.0.1.8', '00:00:00:00:00:04')
     auth.setARP('10.0.1.1', '00:00:00:00:00:01')
     pcap(s1, name='controller', intf='s1', port='53')
 
     freeradius(auth)
     hostapd(auth)
 
-    ied1.cmd('experiment/ieds/./server_ied_pub', ied1.intf(), '&')
-    ied2.cmd('experiment/ieds/./server_ied_sub', ied2.intf(), '&')
+    # scada.cmd('experiment/ieds/./server_ied_sub', scada.intf(), '&')
+    # ev1.cmd('experiment/ieds/./server_ied_pub', ev1.intf(), '&')
 
-    wpa(ied1)
-    sleep(10)
-    wpa(ied2)
+    # app.exe > ../logs/save_to.log 2>&1 &
+    scada.cmdPrint(
+        'python3 experiment/ieds/scada.py >',
+        MMS_LOGS + 'scada.log 2>&1 &')
+    # scada.cmdPrint(
+    #     'script -c "python3 experiment/ieds/scada.py"',
+    #     MMS_LOGS + 'scada.log &')
+
+    wpa(ev1)
+    sleep(.1)
+    wpa_cli(ev1, 'ev.sh', 'ev1')
+
+    wpa(ev2)
+    sleep(.1)
+    wpa_cli(ev2, 'ev.sh', 'ev2')
+
+    wpa(ev3)
+    sleep(.1)
+    wpa_cli(ev3, 'ev.sh', 'ev3')
+
+    wpa(ev4)
+    sleep(.1)
+    wpa_cli(ev4, 'ev.sh', 'ev4')
+
+    wpa(ev5)
+    sleep(.1)
+    wpa_cli(ev5, 'ev.sh', 'ev5')
+
+    # CLI(mn)
+    # mn.stop()
+    # exit(0)
 
     sleep(15)
+    s1.cmdPrint('pkill -2 script')
+    # s1.cmdPrint('pkill -2 -f -n ev.py')
+    # s1.cmdPrint('pkill -2 -f scada.py')
     s1.cmdPrint('pkill -2 wpa_supplicant')
     sleep(2)
     s1.cmdPrint('pkill -2 hostapd')
