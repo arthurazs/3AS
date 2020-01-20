@@ -6,17 +6,17 @@ async def tcp_echo_client(loop):
     stream_in, stream_out = await asyncio.open_connection(
         '10.0.1.3', 102, loop=loop)
 
-    data = await stream_in.read(1024)
-    print('Received COTP')
+    await stream_in.read(1024)
+    print('Recv: COTP')
 
     data = pack('22B', 0x03, 0x00, 0x00, 0x16, 0x11, 0xd0, 0x00, 0x01, 0x14,
                 0x00, 0x00, 0xc1, 0x02, 0x00, 0x01, 0xc2, 0x02, 0x00, 0x01,
                 0xc0, 0x01, 0x0a)
     stream_out.write(data)
-    print('Sent CTOP')
+    print('Sent: CTOP')
 
-    data = await stream_in.read(1024)
-    print('Received MMS-Initiate')
+    await stream_in.read(1024)
+    print('Recv: MMS-Initiate')
 
     data = pack('162B', 0x03, 0x00, 0x00, 0xa2, 0x02, 0xf0, 0x80, 0x0e, 0x99,
                 0x05, 0x06, 0x13, 0x01, 0x00, 0x16, 0x01, 0x02, 0x14, 0x02,
@@ -36,51 +36,35 @@ async def tcp_echo_client(loop):
                 0x0c, 0x03, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0x10)
     stream_out.write(data)
-    print('Sent MMS-Initiate')
+    print('Sent: MMS-Initiate')
 
-    data = await stream_in.read(1024)
-    print('Received MMS-Read')
+    await stream_in.read(1024)
+    print('Recv: MMS-Read >>> ChargingLD/DRCT.Comm.function')
 
-    data = pack('36B', 0x03, 0x00, 0x00, 0x24,  # quantos bytes esse pack
+    data = pack('39B', 0x03, 0x00, 0x00, 0x27,  # quantos bytes esse pack
                 0x02, 0xf0, 0x80, 0x01, 0x00, 0x01, 0x00,
-                0x61, 0x17,  # quantos bytes a baixo
-                0x30, 0x15,  # quantos bytes a baixo
-                0x02, 0x01, 0x03, 0xa0, 0x10,  # quantos bytes a baixo
-                0xa1, 0x0e, 0x02, 0x01, 0x01,
-                0xa4, 0x09, 0xa1, 0x07,
-                0x8a, 0x05, 0x43, 0x61, 0x72, 0x67, 0x61)
+                0x61, 0x1A,  # quantos bytes a baixo
+                0x30, 0x18,  # quantos bytes a baixo
+                0x02, 0x01, 0x03, 0xa0, 0x13,  # quantos bytes a baixo
+                0xa1, 0x11, 0x02, 0x01, 0x01,
+                0xa4, 0x0c, 0xa1, 0x0a,
+                0x8a, 0x08, 0x52, 0x65, 0x63, 0x68, 0x61, 0x72, 0x67, 0x65)
     stream_out.write(data)
-    print('Sent MMS-Read')
+    print('Sent: MMS-Read >>> Recharge')
 
     data = await stream_in.read(1024)
-    print('Received MMS-Write')
+    print('Recv: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
 
     data = pack('29B', 0x03, 0x00, 0x00, 0x1d, 0x02, 0xf0, 0x80, 0x01, 0x00,
                 0x01, 0x00, 0x61, 0x10, 0x30, 0x0e, 0x02, 0x01, 0x03, 0xa0,
                 0x09, 0xa1, 0x07, 0x02, 0x01, 0x02, 0xa5, 0x02, 0x81, 0x00)
     stream_out.write(data)
-    print('Sent MMS-Write')
+    print('Sent: MMS-Write >>> Success')
 
     await asyncio.sleep(10)
 
-    if False:
-        data = await stream_in.read(100)
-        print(f'Received: {data.decode()}')
-
-        message = 'charging'
-        print(f'Send: {message}')
-        stream_out.write(message.encode())
-
-        data = await stream_in.read(100)
-        print(f'Received: {data.decode()}')
-
-        message = 'success'
-        print(f'Send: {message}')
-        stream_out.write(message.encode())
-
-
-        # print('Closing the socket')
-        # stream_out.close()
+    # print('Closing the socket')
+    # stream_out.close()
 
 
 loop = asyncio.get_event_loop()

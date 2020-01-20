@@ -11,10 +11,10 @@ async def handle_echo(stream_in, stream_out):
                 0x02, 0x00, 0x01)
     stream_out.write(data)
     await stream_out.drain()
-    print('Sent COTP')
+    print(f'{addr} Sent: COTP')
 
     data = await stream_in.read(1024)
-    print('Received COTP')
+    print(f'{addr} Recv: COTP')
 
     data = pack('187B', 0x03, 0x00, 0x00, 0xbb, 0x02, 0xf0, 0x80, 0x0d, 0xb2,
                 0x05, 0x06, 0x13, 0x01, 0x00, 0x16, 0x01, 0x02, 0x14, 0x02,
@@ -37,25 +37,25 @@ async def handle_echo(stream_in, stream_out):
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10)
     stream_out.write(data)
     await stream_out.drain()
-    print('Sent MMS-Initiate')
+    print(f'{addr} Sent: MMS-Initiate')
 
     data = await stream_in.read(1024)
-    print('Received MMS-Initiate')
+    print(f'{addr} Recv: MMS-Initiate')
 
-    data = pack('70B', 0x03, 0x00, 0x00, 0x46, 0x02, 0xf0, 0x80, 0x01, 0x00,
-                0x01, 0x00, 0x61, 0x39, 0x30, 0x37, 0x02, 0x01, 0x03, 0xa0,
-                0x32, 0xa0, 0x30, 0x02, 0x01, 0x01, 0xa4, 0x2b, 0xa1, 0x29,
-                0xa0, 0x27, 0x30, 0x25, 0xa0, 0x23, 0xa1, 0x21, 0x1a, 0x0a,
+    data = pack('72B', 0x03, 0x00, 0x00, 0x48, 0x02, 0xf0, 0x80, 0x01, 0x00,
+                0x01, 0x00, 0x61, 0x3b, 0x30, 0x39, 0x02, 0x01, 0x03, 0xa0,
+                0x34, 0xa0, 0x32, 0x02, 0x01, 0x01, 0xa4, 0x2d, 0xa1, 0x2b,
+                0xa0, 0x29, 0x30, 0x27, 0xa0, 0x25, 0xa1, 0x23, 0x1a, 0x0a,
                 0x43, 0x68, 0x61, 0x72, 0x67, 0x69, 0x6e, 0x67, 0x4c, 0x44,
-                0x1a, 0x13, 0x44, 0x52, 0x43, 0x54, 0x24, 0x53, 0x54, 0x24,
-                0x43, 0x6f, 0x6d, 0x6d, 0x24, 0x66, 0x75, 0x6e, 0x63, 0x61,
-                0x6f)
+                0x1a, 0x15, 0x44, 0x52, 0x43, 0x54, 0x24, 0x53, 0x54, 0x24,
+                0x43, 0x6f, 0x6d, 0x6d, 0x24, 0x66, 0x75, 0x6e, 0x63, 0x74,
+                0x69, 0x6f, 0x6e)
     stream_out.write(data)
     await stream_out.drain()
-    print('Sent MMS-Read')
+    print(f'{addr} Sent: MMS-Read >>> ChargingLD/DRCT.Comm.function')
 
     data = await stream_in.read(1024)
-    print('Received MMS-Read')
+    print(f'{addr} Recv: MMS-Read >>> Recharge')
 
     data = pack('76B', 0x03, 0x00, 0x00, 0x4C,  # quantos bytes esse pack
                 0x02, 0xf0, 0x80, 0x01, 0x00, 0x01, 0x00,
@@ -82,32 +82,13 @@ async def handle_echo(stream_in, stream_out):
                 0xa0, 0x03, 0x85, 0x01, 0x02)
     stream_out.write(data)
     await stream_out.drain()
-    print('Sent MMS-Write')
+    print(f'{addr} Sent: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
 
     data = await stream_in.read(1024)
-    print('Received MMS-Write')
+    print(f'{addr} Recv: MMS-Write >>> Success')
 
-    if False:
-        data = 'read->ChargingLD/DRCT.Comm.func'
-        print(f"{addr} >>> Sent: {data}")
-        stream_out.write(data.encode())
-        await stream_out.drain()
-
-        data = await stream_in.read(100)
-        message = data.decode()
-        print(f"{addr} >>> Received: {message}")
-
-        data = 'write->BatteryLD/ZBTC.BatChaSt.setVal->2'  # charge
-        print(f"{addr} >>> Sent: {data}")
-        stream_out.write(data.encode())
-        await stream_out.drain()
-
-        data = await stream_in.read(100)
-        message = data.decode()
-        print(f"{addr} >>> Received: {message}")
-
-        # print("Closing the client socket\n")
-        # stream_out.close()
+    # print("Closing the client socket\n")
+    # stream_out.close()
 
 loop = get_event_loop()
 coroutine = start_server(handle_echo, '10.0.1.3', 102, loop=loop)
