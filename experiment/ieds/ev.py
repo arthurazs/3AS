@@ -1,10 +1,12 @@
-import asyncio
+from asyncio import open_connection, wait_for
+from asyncio import sleep, get_event_loop
 from struct import pack
 
 
 async def tcp_echo_client(loop):
-    stream_in, stream_out = await asyncio.open_connection(
-        '10.0.1.3', 102, loop=loop)
+
+    stream_in, stream_out = await wait_for(
+        open_connection('10.0.1.3', 102, loop=loop), timeout=3)
 
     await stream_in.read(1024)
     print('Recv: COTP')
@@ -61,12 +63,12 @@ async def tcp_echo_client(loop):
     stream_out.write(data)
     print('Sent: MMS-Write >>> Success')
 
-    await asyncio.sleep(10)
+    await sleep(10)
 
     # print('Closing the socket')
     # stream_out.close()
 
 
-loop = asyncio.get_event_loop()
+loop = get_event_loop()
 loop.run_until_complete(tcp_echo_client(loop))
 loop.close()
