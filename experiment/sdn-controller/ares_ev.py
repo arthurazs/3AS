@@ -56,7 +56,7 @@ MMS_SCADA = {1: 3, 2: 1}
 
 
 def log(message):
-    LOG.info('%s %s' % (datetime.now(), message))
+    LOG.info('>>> %s %s' % (datetime.now(), message))
 
 
 def add_authenticator_flow(datapath):
@@ -150,7 +150,7 @@ class StatsController(ControllerBase):
         log('%s (%s) authenticated successfuly' % (identity, mac))
         ip = IEDS[identity]['ip']
         port = IEDS[identity]['port']
-        log('Installing MMS flows (%s <-> controller)' % identity)
+        log('Installing MMS flows (%s <-> scada)' % identity)
         add_mms_flow(self.s1, mac, ip)
         add_mms_flow(self.s2, mac, ip, port)
 
