@@ -4,7 +4,7 @@ CMD=$2
 
 if [ "$CMD" = "CONNECTED" ]; then
     echo "$IFNAME Starting MMS Server..."
-    python3 experiment/ieds/ev.py
+    python3 /home/arthurazs/git/3AS/experiment/ieds/ev.py
 fi
 
 if [ "$CMD" = "DISCONNECTED" ]; then
