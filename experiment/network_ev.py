@@ -7,7 +7,7 @@ from MaxiNet.Frontend import maxinet
 from mininet.node import OVSSwitch
 # from mininet.cli import CLI
 
-
+NUM_EV = 10
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'
@@ -35,7 +35,7 @@ def freeradius(node):
 def wpa(node):
     command = 'wpa_supplicant -i ' + str(node.intfNames()[0]) + ' -D wired'
     # command = 'wpa_supplicant -i ' + str(node.intf()) + ' -D wired'
-    config = '-c ' + IEDS_ROOT + node.name + '.conf -dd -f'
+    config = '-c ' + IEDS_ROOT + 'evs/' + node.name + '.conf -dd -f'
     # config = '-c ' + IEDS_ROOT + str(node) + '.conf -dd -f'
     # log = AUTH_LOGS + 'wpa-' + str(node) + '.log &'
     log = AUTH_LOGS + 'wpa-' + node.name + '.log &'
@@ -69,15 +69,21 @@ def sleep(time):
 
 
 MAPPING = {
+    "s1": 0,
     "auth": 0,
     "scada": 0,
+
+    "s2": 1,
     "ev1": 1,
     "ev2": 1,
     "ev3": 1,
     "ev4": 1,
     "ev5": 1,
-    "s1": 0,
-    "s2": 1
+    "ev6": 1,
+    "ev7": 1,
+    "ev8": 1,
+    "ev9": 1,
+    "ev10": 1,
 }
 
 
@@ -90,17 +96,6 @@ class Topology(Topo):
         scada = self.addHost(
             'scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
 
-        ev1 = self.addHost(
-            'ev1', ip='10.0.1.4/24', mac='00:00:00:00:00:04')
-        ev2 = self.addHost(
-            'ev2', ip='10.0.1.5/24', mac='00:00:00:00:00:05')
-        ev3 = self.addHost(
-            'ev3', ip='10.0.1.6/24', mac='00:00:00:00:00:06')
-        ev4 = self.addHost(
-            'ev4', ip='10.0.1.7/24', mac='00:00:00:00:00:07')
-        ev5 = self.addHost(
-            'ev5', ip='10.0.1.8/24', mac='00:00:00:00:00:08')
-
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
 
@@ -108,11 +103,12 @@ class Topology(Topo):
         self.addLink(s1, auth, 2, 0)
         self.addLink(s1, scada, 3, 0)
 
-        self.addLink(s2, ev1, 2, 0)
-        self.addLink(s2, ev2, 3, 0)
-        self.addLink(s2, ev3, 4, 0)
-        self.addLink(s2, ev4, 5, 0)
-        self.addLink(s2, ev5, 6, 0)
+        for index in range(1, NUM_EV + 1):
+            ev = self.addHost(
+                'ev' + str(index),
+                ip='10.0.1.' + str(index + 3) + '/24',
+                mac='00:00:00:00:00:' + str(index + 3).zfill(2))
+            self.addLink(s2, ev, index + 1, 0)
 
 
 def main():
@@ -136,7 +132,12 @@ def main():
     ev3 = mn.get('ev3')
     ev4 = mn.get('ev4')
     ev5 = mn.get('ev5')
-    evs = [ev1, ev2, ev3, ev4, ev5]
+    ev6 = mn.get('ev6')
+    ev7 = mn.get('ev7')
+    ev8 = mn.get('ev8')
+    ev9 = mn.get('ev9')
+    ev10 = mn.get('ev10')
+    evs = [ev1, ev2, ev3, ev4, ev5, ev6, ev7, ev8, ev9, ev10]
     # scada, ev1, ev2, ev3, ev4, ev5 = mn.get(
     #     'scada', 'ev1', 'ev2', 'ev3', 'ev4', 'ev5')
 
@@ -149,11 +150,8 @@ def main():
         h.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
         h.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
         if h.MAC() == scada.MAC():
-            h.setARP('10.0.1.4', '00:00:00:00:00:04')
-            h.setARP('10.0.1.5', '00:00:00:00:00:05')
-            h.setARP('10.0.1.6', '00:00:00:00:00:06')
-            h.setARP('10.0.1.7', '00:00:00:00:00:07')
-            h.setARP('10.0.1.8', '00:00:00:00:00:08')
+            for ev in evs:
+                h.setARP(ev.IP(), ev.MAC())
         else:
             h.setARP(scada.IP(), scada.MAC())
 
@@ -165,11 +163,8 @@ def main():
 
     logger.info("*** Setting ARP tables\n")
     scada.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ev1.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ev2.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ev3.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ev4.setARP('10.0.1.1', '00:00:00:00:00:01')
-    ev5.setARP('10.0.1.1', '00:00:00:00:00:01')
+    for ev in evs:
+        ev.setARP('10.0.1.1', '00:00:00:00:00:01')
 
     logger.info("*** Creating log folders\n")
     for sw in mn.switches:
@@ -184,6 +179,7 @@ def main():
     pcap(scada)
     pcap(ev1)
     pcap(ev5)
+    pcap(ev10)
 
     # mn.start()
 
@@ -192,11 +188,8 @@ def main():
     s1.cmd('ovs-vsctl set bridge s1 other-config:hwaddr=00:00:00:00:00:01')
     s1.setARP('10.0.1.2', '00:00:00:00:00:02')
     s1.setARP('10.0.1.3', '00:00:00:00:00:03')
-    s1.setARP('10.0.1.4', '00:00:00:00:00:04')
-    s1.setARP('10.0.1.5', '00:00:00:00:00:04')
-    s1.setARP('10.0.1.6', '00:00:00:00:00:04')
-    s1.setARP('10.0.1.7', '00:00:00:00:00:04')
-    s1.setARP('10.0.1.8', '00:00:00:00:00:04')
+    for ev in evs:
+        s1.setARP(ev.IP(), ev.MAC())
     auth.setARP('10.0.1.1', '00:00:00:00:00:01')
     pcap(s1, name='controller', intf='s1', port='53')
 
@@ -221,7 +214,7 @@ def main():
     # exit(0)
 
     logger.info("*** Running experiment\n")
-    sleep(15)
+    sleep(3)
 
     logger.info("*** Finishing experiment\n")
     for sw in mn.switches:
