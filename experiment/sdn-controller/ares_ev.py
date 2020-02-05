@@ -42,8 +42,10 @@ EAPOL_MAC = u'01:80:c2:00:00:03'
 SCADA_MAC = u'00:00:00:00:00:03'
 BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = u'00:00:00:00:00:01'
+AUTH_MAC = '00:00:00:00:00:02'
 
-NUM_EV = 20
+NUM_EV = 40
+EV_BY_SW = 20
 evs = {
     'scada': {'ip': '10.0.1.3', 'port': 1},
 }
@@ -52,8 +54,9 @@ for index in range(1, NUM_EV + 1):
         'ip': '10.0.1.' + str(index + 3),
         'port': index + 1
     }
+MMS_AUTH = {1: 1, 2: 1}
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
-MMS_SCADA = {1: 3, 2: 1}
+MMS_SCADA = {1: 2, 2: 1}
 
 
 def log(message):
@@ -67,10 +70,10 @@ def add_authenticator_flow(datapath):
     inst_to = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
         parser.OFPActionOutput(ofproto_v1_3.OFPP_LOCAL)])]
     match_to = parser.OFPMatch(
-        in_port=2, eth_src='00:00:00:00:00:02', eth_dst=CONTROLLER_MAC)
+        in_port=1, eth_src='00:00:00:00:00:02', eth_dst=CONTROLLER_MAC)
 
     inst_from = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [
-        parser.OFPActionOutput(2)])]
+        parser.OFPActionOutput(1)])]
     match_from = parser.OFPMatch(
         in_port=ofproto_v1_3.OFPP_LOCAL, eth_dst='00:00:00:00:00:02',
         eth_src=CONTROLLER_MAC)
@@ -88,7 +91,7 @@ def add_authenticator_flow(datapath):
     datapath.send_msg(mod)
 
 
-def add_mms_flow(datapath, mac, ip, port=1):
+def add_mms_flow(datapath, mac, ip, port=3):
     dpid = datapath.id
     ofproto = datapath.ofproto
     parser = datapath.ofproto_parser
@@ -213,20 +216,15 @@ class RestStatsApi(app_manager.RyuApp):
         }
 
         # known hosts
-        self.mac_to_port = {
-            1: {
-                EAPOL_MAC: 2,               # s1, EAPOL to port 2
-                '00:00:00:00:00:02': 2,     # s1, AUTH  to port 2
-                CONTROLLER_MAC: ofproto_v1_3.OFPP_LOCAL,
-                SCADA_MAC: 3,               # s1, SCADA to port 3
-            },
-            2: {
-                EAPOL_MAC: 1,               # s2, EAPOL to port 1
-                '00:00:00:00:00:02': 1,     # s2, EAPOL to port 1
-                CONTROLLER_MAC: 1,          # s2, LOCAL to port 1
-                SCADA_MAC: 1,               # s2, SCADA to port 1
-            },
-        }
+        self.mac_to_port = {}
+
+        for index in range(1, (NUM_EV // EV_BY_SW) + 2):
+            self.mac_to_port[index] = {
+                EAPOL_MAC: MMS_AUTH[index],
+                AUTH_MAC: MMS_AUTH[index],
+                CONTROLLER_MAC: MMS_CONTROLLER[index],
+                SCADA_MAC: MMS_SCADA[index],
+            }
 
         self.data['authenticated'] = self.authenticated
 

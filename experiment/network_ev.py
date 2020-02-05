@@ -7,7 +7,8 @@ from MaxiNet.Frontend import maxinet
 from mininet.node import OVSSwitch
 # from mininet.cli import CLI
 
-NUM_EV = 20
+NUM_EV = 40
+EV_BY_SW = 20
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'
@@ -90,19 +91,23 @@ class Topology(Topo):
         scada = self.addHost(
             'scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
 
+        ss = []
         s1 = self.addSwitch('s1')
-        s2 = self.addSwitch('s2')
-
-        self.addLink(s1, s2, 1, 1)
-        self.addLink(s1, auth, 2, 0)
-        self.addLink(s1, scada, 3, 0)
+        self.addLink(s1, auth, 1, 0)
+        self.addLink(s1, scada, 2, 0)
+        for index in range(2, (NUM_EV / EV_BY_SW) + 2):
+            switch = self.addSwitch('s' + str(index))
+            self.addLink(s1, switch, index + 1, 1)
+            ss.append(switch)
 
         for index in range(1, NUM_EV + 1):
             ev = self.addHost(
                 'ev' + str(index),
                 ip='10.0.1.' + str(index + 3) + '/24',
                 mac='00:00:00:00:00:' + str(index + 3).zfill(2))
-            self.addLink(s2, ev, index + 1, 0)
+            switch = (index - 1) / EV_BY_SW
+            port = (index % (EV_BY_SW + 1)) + 1
+            self.addLink(ss[switch], ev, port, 0)
 
 
 def main():
