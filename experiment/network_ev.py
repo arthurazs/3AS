@@ -69,7 +69,7 @@ def sleep(time):
     _sleep(time)
 
 
-MAPPING = {
+mapping = {
     "s1": 0,
     "auth": 0,
     "scada": 0,
@@ -80,6 +80,12 @@ MAPPING = {
     "ev11": 1, "ev12": 1, "ev13": 1, "ev14": 1, "ev15": 1,
     "ev16": 1, "ev17": 1, "ev18": 1, "ev19": 1, "ev20": 1,
 }
+
+for index in range(2, (NUM_EV / EV_BY_SW) + 2):
+    mapping['s' + str(index)] = index - 1
+
+for index in range(1, NUM_EV + 1):
+    mapping['ev' + str(index)] = ((index - 1) / EV_BY_SW) + 1
 
 
 class Topology(Topo):
@@ -115,7 +121,7 @@ def main():
     # app.exe > ../logs/save_to.log 2>&1 &
     cluster = maxinet.Cluster()
     mn = maxinet.Experiment(
-        cluster, Topology(), switch=OVSSwitch, nodemapping=MAPPING,
+        cluster, Topology(), switch=OVSSwitch, nodemapping=mapping,
         controller='10.0.0.4')
     mn.setup()
     auth = mn.get('auth')
@@ -129,6 +135,8 @@ def main():
     ev1 = mn.get('ev1')
     ev10 = mn.get('ev10')
     ev20 = mn.get('ev20')
+    ev30 = mn.get('ev30')
+    ev40 = mn.get('ev40')
 
     for sw in mn.switches:
         sw.cmd('rm -rf /var/run/wpa_supplicant')
@@ -169,6 +177,8 @@ def main():
     pcap(ev1)
     pcap(ev10)
     pcap(ev20)
+    pcap(ev30)
+    pcap(ev40)
 
     # mn.start()
 

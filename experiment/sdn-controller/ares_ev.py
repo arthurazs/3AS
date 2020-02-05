@@ -54,9 +54,10 @@ for index in range(1, NUM_EV + 1):
         'ip': '10.0.1.' + str(index + 3),
         'port': index + 1
     }
-MMS_AUTH = {1: 1, 2: 1}
-MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
-MMS_SCADA = {1: 2, 2: 1}
+# TODO Automate this \/
+MMS_AUTH = {1: 1, 2: 1, 3: 1}
+MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1, 3: 1}
+MMS_SCADA = {1: 2, 2: 1, 3: 1}
 
 
 def log(message):
@@ -146,8 +147,10 @@ class StatsController(ControllerBase):
         self.dpset = data['dpset']
         self.waiters = data['waiters']
         self.authenticated = data['authenticated']
+        # TODO Automate this \/
         self.s1 = self.dpset.get(1)
         self.s2 = self.dpset.get(2)
+        self.s3 = self.dpset.get(2)
 
     def auth_user(self, req, mac, identity, **_kwargs):
         # TODO Investigate the use of diffie-hellman
@@ -156,7 +159,10 @@ class StatsController(ControllerBase):
         port = evs[identity]['port']
         log('Installing MMS flows (%s <-> scada)' % identity)
         add_mms_flow(self.s1, mac, ip)
-        add_mms_flow(self.s2, mac, ip, port)
+        if int(identity[2:]) > 20:
+            add_mms_flow(self.s3, mac, ip, port)
+        else:
+            add_mms_flow(self.s2, mac, ip, port)
 
         self.authenticated[mac] = {
             'address': mac, 'identity': identity}
