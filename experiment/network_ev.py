@@ -7,7 +7,7 @@ from MaxiNet.Frontend import maxinet
 from mininet.node import OVSSwitch
 # from mininet.cli import CLI
 
-NUM_EV = 10
+NUM_EV = 20
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'
@@ -74,16 +74,10 @@ MAPPING = {
     "scada": 0,
 
     "s2": 1,
-    "ev1": 1,
-    "ev2": 1,
-    "ev3": 1,
-    "ev4": 1,
-    "ev5": 1,
-    "ev6": 1,
-    "ev7": 1,
-    "ev8": 1,
-    "ev9": 1,
-    "ev10": 1,
+    "ev1": 1, "ev2": 1, "ev3": 1, "ev4": 1, "ev5": 1,
+    "ev6": 1, "ev7": 1, "ev8": 1, "ev9": 1, "ev10": 1,
+    "ev11": 1, "ev12": 1, "ev13": 1, "ev14": 1, "ev15": 1,
+    "ev16": 1, "ev17": 1, "ev18": 1, "ev19": 1, "ev20": 1,
 }
 
 
@@ -113,33 +107,23 @@ class Topology(Topo):
 
 def main():
 
+    # app.exe > ../logs/save_to.log 2>&1 &
     cluster = maxinet.Cluster()
     mn = maxinet.Experiment(
         cluster, Topology(), switch=OVSSwitch, nodemapping=MAPPING,
-        # controller=RemoteController('c0', ip='10.0.0.4', port=6653))
         controller='10.0.0.4')
-    # app.exe > ../logs/save_to.log 2>&1 &
-    # mn = Mininet(  # TODO Test without static ARP
-    #     topo=Topology(), autoStaticArp=True,
-    #     controller=RemoteController('c0', ip='127.0.0.1', port=6653))
-    # auth, s1, s2 = mn.get('auth', 's1', 's2')
     mn.setup()
     auth = mn.get('auth')
     s1 = mn.get('s1')
     scada = mn.get('scada')
+
+    evs = []
+    for h in mn.hosts:
+        if 'ev' in h.name:
+            evs.append(h)
     ev1 = mn.get('ev1')
-    ev2 = mn.get('ev2')
-    ev3 = mn.get('ev3')
-    ev4 = mn.get('ev4')
-    ev5 = mn.get('ev5')
-    ev6 = mn.get('ev6')
-    ev7 = mn.get('ev7')
-    ev8 = mn.get('ev8')
-    ev9 = mn.get('ev9')
     ev10 = mn.get('ev10')
-    evs = [ev1, ev2, ev3, ev4, ev5, ev6, ev7, ev8, ev9, ev10]
-    # scada, ev1, ev2, ev3, ev4, ev5 = mn.get(
-    #     'scada', 'ev1', 'ev2', 'ev3', 'ev4', 'ev5')
+    ev20 = mn.get('ev20')
 
     for sw in mn.switches:
         sw.cmd('rm -rf /var/run/wpa_supplicant')
@@ -178,8 +162,8 @@ def main():
     pcap(auth, name='sdn-hostapd')
     pcap(scada)
     pcap(ev1)
-    pcap(ev5)
     pcap(ev10)
+    pcap(ev20)
 
     # mn.start()
 

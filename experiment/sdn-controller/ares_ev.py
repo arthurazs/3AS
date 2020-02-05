@@ -43,19 +43,15 @@ SCADA_MAC = u'00:00:00:00:00:03'
 BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = u'00:00:00:00:00:01'
 
-IEDS = {
+NUM_EV = 20
+evs = {
     'scada': {'ip': '10.0.1.3', 'port': 1},
-    'ev1': {'ip': '10.0.1.4', 'port': 2},
-    'ev2': {'ip': '10.0.1.5', 'port': 3},
-    'ev3': {'ip': '10.0.1.6', 'port': 4},
-    'ev4': {'ip': '10.0.1.7', 'port': 5},
-    'ev5': {'ip': '10.0.1.8', 'port': 6},
-    'ev6': {'ip': '10.0.1.9', 'port': 7},
-    'ev7': {'ip': '10.0.1.10', 'port': 8},
-    'ev8': {'ip': '10.0.1.11', 'port': 9},
-    'ev9': {'ip': '10.0.1.12', 'port': 10},
-    'ev10': {'ip': '10.0.1.13', 'port': 11}
 }
+for index in range(1, NUM_EV + 1):
+    evs['ev' + str(index)] = {
+        'ip': '10.0.1.' + str(index + 3),
+        'port': index + 1
+    }
 MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1}
 MMS_SCADA = {1: 3, 2: 1}
 
@@ -153,8 +149,8 @@ class StatsController(ControllerBase):
     def auth_user(self, req, mac, identity, **_kwargs):
         # TODO Investigate the use of diffie-hellman
         log('%s (%s) authenticated successfuly' % (identity, mac))
-        ip = IEDS[identity]['ip']
-        port = IEDS[identity]['port']
+        ip = evs[identity]['ip']
+        port = evs[identity]['port']
         log('Installing MMS flows (%s <-> scada)' % identity)
         add_mms_flow(self.s1, mac, ip)
         add_mms_flow(self.s2, mac, ip, port)
