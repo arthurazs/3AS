@@ -87,8 +87,8 @@ async def handle_echo(stream_in, stream_out):
     data = await stream_in.read(1024)
     print(f'{addr} Recv: MMS-Write >>> Success')
 
-    # print("Closing the client socket\n")
-    # stream_out.close()
+    print("Closing the client socket\n")
+    stream_out.close()
 
 loop = get_event_loop()
 coroutine = start_server(handle_echo, '10.0.1.3', 102, loop=loop)

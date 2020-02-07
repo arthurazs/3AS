@@ -46,13 +46,12 @@ AUTH_MAC = '00:00:00:00:00:02'
 
 NUM_EV = 40
 EV_BY_SW = 20
-evs = {
-    'scada': {'ip': '10.0.1.3', 'port': 1},
-}
+evs = {}
 for index in range(1, NUM_EV + 1):
+    port = ((index - 1) % EV_BY_SW) + 2
     evs['ev' + str(index)] = {
         'ip': '10.0.1.' + str(index + 3),
-        'port': index + 1
+        'port': port
     }
 # TODO Automate this \/
 MMS_AUTH = {1: 1, 2: 1, 3: 1}
@@ -92,7 +91,7 @@ def add_authenticator_flow(datapath):
     datapath.send_msg(mod)
 
 
-def add_mms_flow(datapath, mac, ip, port=3):
+def add_mms_flow(datapath, mac, ip, port):
     dpid = datapath.id
     ofproto = datapath.ofproto
     parser = datapath.ofproto_parser
@@ -147,22 +146,22 @@ class StatsController(ControllerBase):
         self.dpset = data['dpset']
         self.waiters = data['waiters']
         self.authenticated = data['authenticated']
-        # TODO Automate this \/
-        self.s1 = self.dpset.get(1)
-        self.s2 = self.dpset.get(2)
-        self.s3 = self.dpset.get(2)
+        self.switches = []
+        for index in range(1, (NUM_EV // EV_BY_SW) + 2):
+            self.switches.append(self.dpset.get(index))
 
     def auth_user(self, req, mac, identity, **_kwargs):
         # TODO Investigate the use of diffie-hellman
         log('%s (%s) authenticated successfuly' % (identity, mac))
+        ev_number = int(identity[2:])
         ip = evs[identity]['ip']
         port = evs[identity]['port']
         log('Installing MMS flows (%s <-> scada)' % identity)
-        add_mms_flow(self.s1, mac, ip)
-        if int(identity[2:]) > 20:
-            add_mms_flow(self.s3, mac, ip, port)
-        else:
-            add_mms_flow(self.s2, mac, ip, port)
+
+        s1_port = ((ev_number - 1) // EV_BY_SW) + 3
+        add_mms_flow(self.switches[0], mac, ip, s1_port)
+        ev_switch = self.switches[s1_port - 2]
+        add_mms_flow(ev_switch, mac, ip, port)
 
         self.authenticated[mac] = {
             'address': mac, 'identity': identity}
@@ -196,6 +195,8 @@ class RestStatsApi(app_manager.RyuApp):
         super(RestStatsApi, self).__init__(*args, **kwargs)
 
         LOG.info('>>> SDN Controller MAC ' + CONTROLLER_MAC)
+
+        LOG.info('>>>>>>>>>>>> %s' % evs)
 
         self.dpset = kwargs['dpset']
         wsgi = kwargs['wsgi']
@@ -294,7 +295,9 @@ class RestStatsApi(app_manager.RyuApp):
         src = eth_pkt.src.lower()
         dst = eth_pkt.dst.lower()
         if eth_pkt.ethertype == ETH_TYPE_8021X:
-            LOG.info('802.1X packet in %s %s %s %s', dpid, src, dst, in_port)
+            LOG.info(
+                '802.1X packet in s%s %s -> %s (port %s)',
+                dpid, src, dst, in_port)
 
             # learn a mac address to avoid FLOOD next time.
             self.mac_to_port[dpid][src] = in_port

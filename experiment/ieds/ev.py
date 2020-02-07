@@ -63,10 +63,10 @@ async def tcp_echo_client(loop):
     stream_out.write(data)
     print('Sent: MMS-Write >>> Success')
 
-    await sleep(10)
+    # await sleep(10)
 
-    # print('Closing the socket')
-    # stream_out.close()
+    print('Closing the socket')
+    stream_out.close()
 
 
 loop = get_event_loop()

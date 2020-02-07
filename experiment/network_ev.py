@@ -73,12 +73,6 @@ mapping = {
     "s1": 0,
     "auth": 0,
     "scada": 0,
-
-    "s2": 1,
-    "ev1": 1, "ev2": 1, "ev3": 1, "ev4": 1, "ev5": 1,
-    "ev6": 1, "ev7": 1, "ev8": 1, "ev9": 1, "ev10": 1,
-    "ev11": 1, "ev12": 1, "ev13": 1, "ev14": 1, "ev15": 1,
-    "ev16": 1, "ev17": 1, "ev18": 1, "ev19": 1, "ev20": 1,
 }
 
 for index in range(2, (NUM_EV / EV_BY_SW) + 2):
@@ -112,8 +106,9 @@ class Topology(Topo):
                 ip='10.0.1.' + str(index + 3) + '/24',
                 mac='00:00:00:00:00:' + str(index + 3).zfill(2))
             switch = (index - 1) / EV_BY_SW
-            port = (index % (EV_BY_SW + 1)) + 1
+            port = ((index - 1) % EV_BY_SW) + 2
             self.addLink(ss[switch], ev, port, 0)
+            logger.info('>>>>>>>>', switch, ev, port, '\n')
 
 
 def main():
@@ -135,11 +130,15 @@ def main():
     ev1 = mn.get('ev1')
     ev10 = mn.get('ev10')
     ev20 = mn.get('ev20')
-    ev30 = mn.get('ev30')
+    ev22 = mn.get('ev22')
     ev40 = mn.get('ev40')
 
     for sw in mn.switches:
         sw.cmd('rm -rf /var/run/wpa_supplicant')
+        sw.cmd('rm -rf /home/arthurazs/git/3AS/logs/s*.log')
+        sw.cmd('rm -rf /home/arthurazs/git/3AS/logs/auth')
+        sw.cmd('rm -rf /home/arthurazs/git/3AS/logs/mms')
+        sw.cmd('rm -rf /home/arthurazs/git/3AS/logs/pcap')
 
     logger.info("*** Disabling hosts ipv6\n")
     for h in mn.hosts:
@@ -148,6 +147,7 @@ def main():
         h.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
         if h.MAC() == scada.MAC():
             for ev in evs:
+                logger.info('\n>>>>>>>>', h.name, ev.IP(), ev.MAC())
                 h.setARP(ev.IP(), ev.MAC())
         else:
             h.setARP(scada.IP(), scada.MAC())
@@ -177,7 +177,7 @@ def main():
     pcap(ev1)
     pcap(ev10)
     pcap(ev20)
-    pcap(ev30)
+    pcap(ev22)
     pcap(ev40)
 
     # mn.start()
@@ -213,7 +213,7 @@ def main():
     # exit(0)
 
     logger.info("*** Running experiment\n")
-    sleep(3)
+    sleep(10)
 
     logger.info("*** Finishing experiment\n")
     for sw in mn.switches:
