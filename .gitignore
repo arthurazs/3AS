@@ -5,6 +5,9 @@
 # python
 *.pyc
 
+# confs
+ev*.conf
+
 # certificates
 *.pem
 *.der
