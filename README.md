@@ -53,6 +53,15 @@ Head over to the file `/etc/freeradius/3.0/users` and add the following line to 
 ied02 Cleartext-Password := "ied02"
 ```
 
+---
+
+Head over to the folder `3AS/experiment/ieds/evs` and run the script `gen_conf.sh` script:
+
+```bash
+cd 3AS/experiment/ieds/evs
+sh gen_conf.sh
+```
+
 ## Run
 
 ```bash
