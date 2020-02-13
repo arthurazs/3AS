@@ -1,5 +1,5 @@
 from asyncio import get_event_loop, start_server
-from struct import pack
+from struct import pack, sleep
 
 
 # https://tools.ietf.org/html/rfc1006
@@ -87,8 +87,10 @@ async def handle_echo(stream_in, stream_out):
     data = await stream_in.read(1024)
     print(f'{addr} Recv: MMS-Write >>> Success')
 
-    print("Closing the client socket\n")
-    stream_out.close()
+    await sleep(1)
+
+    # print("Closing the client socket\n")
+    # stream_out.close()
 
 loop = get_event_loop()
 coroutine = start_server(handle_echo, '10.0.1.3', 102, loop=loop)
@@ -98,9 +100,7 @@ print('Serving on {}'.format(server.sockets[0].getsockname()))
 try:
     loop.run_forever()
 except KeyboardInterrupt:
-    pass
-
-# Close the server
-server.close()
-loop.run_until_complete(server.wait_closed())
-loop.close()
+    # Close the server
+    server.close()
+    loop.run_until_complete(server.wait_closed())
+    loop.close()
