@@ -7,8 +7,8 @@ from MaxiNet.Frontend import maxinet
 from mininet.node import OVSSwitch
 # from mininet.cli import CLI
 
-NUM_EV = 40
-EV_BY_SW = 20
+NUM_EV = 200
+EV_BY_SW = 50
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'
@@ -103,12 +103,13 @@ class Topology(Topo):
         for index in range(1, NUM_EV + 1):
             ev = self.addHost(
                 'ev' + str(index),
+                # TODO Fix IP and MAC range
                 ip='10.0.1.' + str(index + 3) + '/24',
                 mac='00:00:00:00:00:' + str(index + 3).zfill(2))
             switch = (index - 1) / EV_BY_SW
             port = ((index - 1) % EV_BY_SW) + 2
             self.addLink(ss[switch], ev, port, 0)
-            logger.info('>>>>>>>>', switch, ev, port, '\n')
+            logger.info('>>>>>>>>', switch, ev, port, '10.0.1.' + str(index + 3) + '/24', '00:00:00:00:00:' + str(index + 3).zfill(2), '\n')
 
 
 def main():
@@ -147,7 +148,6 @@ def main():
         h.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
         if h.MAC() == scada.MAC():
             for ev in evs:
-                logger.info('\n>>>>>>>>', h.name, ev.IP(), ev.MAC())
                 h.setARP(ev.IP(), ev.MAC())
         else:
             h.setARP(scada.IP(), scada.MAC())
@@ -213,7 +213,7 @@ def main():
     # exit(0)
 
     logger.info("*** Running experiment\n")
-    sleep(10)
+    sleep(30)
 
     logger.info("*** Finishing experiment\n")
     for sw in mn.switches:
