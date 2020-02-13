@@ -63,6 +63,7 @@ async def tcp_echo_client(loop):
     stream_out.write(data)
     print('Sent: MMS-Write >>> Success')
 
+    # TODO Check if this impacts the comm
     await sleep(1)
 
     # print('Closing the socket')

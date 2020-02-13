@@ -1,5 +1,5 @@
-from asyncio import get_event_loop, start_server
-from struct import pack, sleep
+from asyncio import get_event_loop, start_server, sleep
+from struct import pack
 
 
 # https://tools.ietf.org/html/rfc1006
@@ -87,6 +87,7 @@ async def handle_echo(stream_in, stream_out):
     data = await stream_in.read(1024)
     print(f'{addr} Recv: MMS-Write >>> Success')
 
+    # TODO Check if this impacts the comm
     await sleep(1)
 
     # print("Closing the client socket\n")
