@@ -44,8 +44,8 @@ BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = u'00:00:00:00:00:01'
 AUTH_MAC = '00:00:00:00:00:02'
 
-NUM_EV = 40
-EV_BY_SW = 20
+NUM_EV = 300
+EV_BY_SW = 75
 evs = {}
 for index in range(1, NUM_EV + 1):
     port = ((index - 1) % EV_BY_SW) + 2
@@ -53,10 +53,18 @@ for index in range(1, NUM_EV + 1):
         'ip': '10.0.1.' + str(index + 3),
         'port': port
     }
-# TODO Automate this \/
-MMS_AUTH = {1: 1, 2: 1, 3: 1}
-MMS_CONTROLLER = {1: ofproto_v1_3.OFPP_LOCAL, 2: 1, 3: 1}
-MMS_SCADA = {1: 2, 2: 1, 3: 1}
+
+mms_auth = {1: 1}
+for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+    mms_auth[index] = 1
+
+mms_controller = {1: ofproto_v1_3.OFPP_LOCAL}
+for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+    mms_controller[index] = 1
+
+mms_scada = {1: 2}
+for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+    mms_scada[index] = 1
 
 
 def log(message):
@@ -101,12 +109,12 @@ def add_mms_flow(datapath, mac, ip, port):
         [parser.OFPActionOutput(port)])]
     match_to = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
-        in_port=MMS_SCADA[dpid], eth_src=SCADA_MAC,
+        in_port=mms_scada[dpid], eth_src=SCADA_MAC,
         eth_dst=mac, ipv4_src=MMS_IP, ipv4_dst=ip, tcp_src=MMS_TCP)
 
     inst_from = [parser.OFPInstructionActions(
         ofproto.OFPIT_APPLY_ACTIONS,
-        [parser.OFPActionOutput(MMS_SCADA[dpid])])]
+        [parser.OFPActionOutput(mms_scada[dpid])])]
     match_from = parser.OFPMatch(
         eth_type=ETH_TYPE_IP, ip_proto=6,
         in_port=port, eth_src=mac, eth_dst=SCADA_MAC,
@@ -227,10 +235,10 @@ class RestStatsApi(app_manager.RyuApp):
 
         for index in range(1, (NUM_EV // EV_BY_SW) + 2):
             self.mac_to_port[index] = {
-                EAPOL_MAC: MMS_AUTH[index],
-                AUTH_MAC: MMS_AUTH[index],
-                CONTROLLER_MAC: MMS_CONTROLLER[index],
-                SCADA_MAC: MMS_SCADA[index],
+                EAPOL_MAC: mms_auth[index],
+                AUTH_MAC: mms_auth[index],
+                CONTROLLER_MAC: mms_controller[index],
+                SCADA_MAC: mms_scada[index],
             }
 
         self.data['authenticated'] = self.authenticated
