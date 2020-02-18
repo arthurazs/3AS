@@ -5,10 +5,10 @@ from mininet.log import setLogLevel, lg as logger
 from time import sleep as _sleep
 from MaxiNet.Frontend import maxinet
 from mininet.node import OVSSwitch
-# from mininet.cli import CLI
+from sys import argv
 
-NUM_EV = 200
-EV_BY_SW = 50
+NUM_EV = int(argv[1])
+EV_BY_SW = int(argv[2])
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'

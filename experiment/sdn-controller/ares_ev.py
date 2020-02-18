@@ -16,6 +16,7 @@
 import logging
 import json
 
+from ryu import cfg
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller import dpset
@@ -44,8 +45,8 @@ BROADCAST_MAC = u'ff:ff:ff:ff:ff:ff'
 CONTROLLER_MAC = u'00:00:00:00:00:01'
 AUTH_MAC = '00:00:00:00:00:02'
 
-NUM_EV = 300
-EV_BY_SW = 75
+NUM_EV = int(cfg.CONF.num_ev)
+EV_BY_SW = int(cfg.CONF.ev_by_sw)
 evs = {}
 for index in range(1, NUM_EV + 1):
     port = ((index - 1) % EV_BY_SW) + 2
