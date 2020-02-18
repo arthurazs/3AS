@@ -33,6 +33,15 @@ from ryu.lib.packet import ethernet
 from ryu.ofproto.ether import ETH_TYPE_IP
 from datetime import datetime
 
+
+def ip_adder(value):
+    # IP Address Adder for netmask /16
+    rest, network, host = value.rsplit('.', 2)
+    host = (int(host) % 254) + 1
+    network = int(network) + int(host == 1)
+    return rest + '.' + str(network) + '.' + str(host)
+
+
 LOG = logging.getLogger('ryu.app.ofctl_rest')
 
 MMS_IP = '10.0.1.3'
@@ -48,10 +57,12 @@ AUTH_MAC = '00:00:00:00:00:02'
 NUM_EV = int(cfg.CONF.num_ev)
 EV_BY_SW = int(cfg.CONF.ev_by_sw)
 evs = {}
+ip = '10.0.1.3'
 for index in range(1, NUM_EV + 1):
     port = ((index - 1) % EV_BY_SW) + 2
+    ip = ip_adder(ip)
     evs['ev' + str(index)] = {
-        'ip': '10.0.1.' + str(index + 3),
+        'ip': ip,
         'port': port
     }
 

@@ -20,6 +20,24 @@ PCAP_LOGS = LOGS + 'pcap/'
 MMS_LOGS = LOGS + 'mms/'
 
 
+def ip_adder(value):
+    # IP Address Adder for netmask /16
+    rest, network, host = value.rsplit('.', 2)
+    host = (int(host) % 254) + 1
+    network = int(network) + int(host == 1)
+    return rest + '.' + str(network) + '.' + str(host)
+
+
+def mac_adder(value):
+    # MAC Address Adder
+    rest, network, host = value.rsplit(':', 2)
+    host = (int(host, 16) % 254) + 1
+    network = int(network, 16) + int(host == 1)
+    host = hex(host)[2:].zfill(2).upper()
+    network = hex(network)[2:].zfill(2).upper()
+    return rest + ':' + network + ':' + host
+
+
 def hostapd(node):
     command = AUTH_ROOT + './sdn-hostapd'
     config = AUTH_ROOT + 'sdn-hostapd.conf -t'
@@ -35,17 +53,13 @@ def freeradius(node):
 
 def wpa(node):
     command = 'wpa_supplicant -i ' + str(node.intfNames()[0]) + ' -D wired'
-    # command = 'wpa_supplicant -i ' + str(node.intf()) + ' -D wired'
     config = '-c ' + IEDS_ROOT + 'evs/' + node.name + '.conf -dd -f'
-    # config = '-c ' + IEDS_ROOT + str(node) + '.conf -dd -f'
-    # log = AUTH_LOGS + 'wpa-' + str(node) + '.log &'
     log = AUTH_LOGS + 'wpa-' + node.name + '.log &'
     node.cmdPrint(command, config, log)
 
 
 def wpa_cli(node, script, name):
     command = 'wpa_cli -i ' + str(node.intfNames()[0])
-    # command = 'wpa_cli -i ' + str(node.intf())
     filename = '-a ' + IEDS_ROOT + script
     log = '> ' + MMS_LOGS + name + '.log 2>&1 &'
     node.cmdPrint(command, filename, log)
@@ -53,10 +67,8 @@ def wpa_cli(node, script, name):
 
 def pcap(node, name=None, intf=None, port=None):
     if not name:
-        # name = str(node)
         name = node.name
     if not intf:
-        # intf = node.intf()
         intf = node.intfNames()[0]
     command = 'tcpdump -i ' + str(intf) + ' -w'
     log = PCAP_LOGS + name + '.pcap'
@@ -64,8 +76,8 @@ def pcap(node, name=None, intf=None, port=None):
     node.cmd(command, log, tail, '&')
 
 
-def sleep(time):
-    logger.info('*** Sleeping for {} seconds...\n'.format(time))
+def sleep(time, msg):
+    logger.info('*** {}: Sleeping for {} seconds...\n'.format(msg, time))
     _sleep(time)
 
 
@@ -87,9 +99,9 @@ class Topology(Topo):
         Topo.__init__(self)
 
         auth = self.addHost(
-            'auth', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
+            'auth', ip='10.0.1.2/16', mac='00:00:00:00:00:02')
         scada = self.addHost(
-            'scada', ip='10.0.1.3/24', mac='00:00:00:00:00:03')
+            'scada', ip='10.0.1.3/16', mac='00:00:00:00:00:03')
 
         ss = []
         s1 = self.addSwitch('s1')
@@ -100,16 +112,19 @@ class Topology(Topo):
             self.addLink(s1, switch, index + 1, 1)
             ss.append(switch)
 
+        ip = '10.0.1.3'
+        mac = '00:00:00:00:00:03'
         for index in range(1, NUM_EV + 1):
+            ip = ip_adder(ip)
+            mac = mac_adder(mac)
             ev = self.addHost(
                 'ev' + str(index),
                 # TODO Fix IP and MAC range
-                ip='10.0.1.' + str(index + 3) + '/24',
-                mac='00:00:00:00:00:' + str(index + 3).zfill(2))
+                ip=ip + '/16',
+                mac=mac)
             switch = (index - 1) / EV_BY_SW
             port = ((index - 1) % EV_BY_SW) + 2
             self.addLink(ss[switch], ev, port, 0)
-            logger.info('>>>>>>>>', switch, ev, port, '10.0.1.' + str(index + 3) + '/24', '00:00:00:00:00:' + str(index + 3).zfill(2), '\n')
 
 
 def main():
@@ -129,10 +144,8 @@ def main():
         if 'ev' in h.name:
             evs.append(h)
     ev1 = mn.get('ev1')
-    ev10 = mn.get('ev10')
-    ev20 = mn.get('ev20')
-    ev22 = mn.get('ev22')
-    ev40 = mn.get('ev40')
+    ev251 = mn.get('ev251')
+    ev252 = mn.get('ev252')
 
     for sw in mn.switches:
         sw.cmd('rm -rf /var/run/wpa_supplicant')
@@ -175,15 +188,13 @@ def main():
     pcap(auth, name='sdn-hostapd')
     pcap(scada)
     pcap(ev1)
-    pcap(ev10)
-    pcap(ev20)
-    pcap(ev22)
-    pcap(ev40)
+    pcap(ev251)
+    pcap(ev252)
 
     # mn.start()
 
     logger.info("*** Configuring bridge between 'auth' and 'controller'\n")
-    s1.cmd('ifconfig s1 10.0.1.1 netmask 255.255.255.0')
+    s1.cmd('ifconfig s1 10.0.1.1 netmask 255.255.0.0')
     s1.cmd('ovs-vsctl set bridge s1 other-config:hwaddr=00:00:00:00:00:01')
     s1.setARP('10.0.1.2', '00:00:00:00:00:02')
     s1.setARP('10.0.1.3', '00:00:00:00:00:03')
@@ -205,23 +216,19 @@ def main():
     logger.info("*** Starting EVs\n")
     for ev in evs:
         wpa(ev)
-        sleep(.1)
+        sleep(.1, ev.name)
         wpa_cli(ev, 'ev.sh', ev.name)
 
-    # CLI(mn)
-    # mn.stop()
-    # exit(0)
-
     logger.info("*** Running experiment\n")
-    sleep(30)
+    sleep(5, 'Experiment')
 
     logger.info("*** Finishing experiment\n")
     for sw in mn.switches:
         sw.cmd('screen -S scada -X quit')
         sw.cmd('pkill -2 wpa_supplicant')
-        sleep(2)
+        sleep(2, sw.name + ' -> killing wpa')
         sw.cmd('pkill -2 hostapd')
-        sleep(2)
+        sleep(2, sw.name + ' -> killing hostapd')
         sw.cmd('pkill -2 freeradius')
         sw.cmd('pkill -2 server_ied')
         sw.cmd('ovs-ofctl dump-flows ' + sw.name +
