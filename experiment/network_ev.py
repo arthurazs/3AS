@@ -9,6 +9,7 @@ from sys import argv
 
 NUM_EV = int(argv[1])
 EV_BY_SW = int(argv[2])
+EXT_MACH = int(argv[3])
 ROOT = '/home/arthurazs/git/3AS/'
 EXPERIMENT = ROOT + 'experiment/'
 AUTH_ROOT = EXPERIMENT + 'authenticator/'
@@ -18,6 +19,10 @@ LOGS = ROOT + 'logs/'
 AUTH_LOGS = LOGS + 'auth/'
 PCAP_LOGS = LOGS + 'pcap/'
 MMS_LOGS = LOGS + 'mms/'
+
+
+def ceil(dividend, divisor):
+    return -(-dividend / divisor)
 
 
 def ip_adder(value):
@@ -87,11 +92,11 @@ mapping = {
     "scada": 0,
 }
 
-for index in range(2, (NUM_EV / EV_BY_SW) + 2):
-    mapping['s' + str(index)] = index - 1
+for index in range(2, ceil(NUM_EV, EV_BY_SW) + 2):
+    mapping['s' + str(index)] = ((index - 2) % EXT_MACH) + 1
 
 for index in range(1, NUM_EV + 1):
-    mapping['ev' + str(index)] = ((index - 1) / EV_BY_SW) + 1
+    mapping['ev' + str(index)] = (((index - 1) / EV_BY_SW) % EXT_MACH) + 1
 
 
 class Topology(Topo):
@@ -107,7 +112,7 @@ class Topology(Topo):
         s1 = self.addSwitch('s1')
         self.addLink(s1, auth, 1, 0)
         self.addLink(s1, scada, 2, 0)
-        for index in range(2, (NUM_EV / EV_BY_SW) + 2):
+        for index in range(2, ceil(NUM_EV, EV_BY_SW) + 2):
             switch = self.addSwitch('s' + str(index))
             self.addLink(s1, switch, index + 1, 1)
             ss.append(switch)
@@ -117,11 +122,7 @@ class Topology(Topo):
         for index in range(1, NUM_EV + 1):
             ip = ip_adder(ip)
             mac = mac_adder(mac)
-            ev = self.addHost(
-                'ev' + str(index),
-                # TODO Fix IP and MAC range
-                ip=ip + '/16',
-                mac=mac)
+            ev = self.addHost('ev' + str(index), ip=ip + '/16', mac=mac)
             switch = (index - 1) / EV_BY_SW
             port = ((index - 1) % EV_BY_SW) + 2
             self.addLink(ss[switch], ev, port, 0)
@@ -143,9 +144,6 @@ def main():
     for h in mn.hosts:
         if 'ev' in h.name:
             evs.append(h)
-    ev1 = mn.get('ev1')
-    ev251 = mn.get('ev251')
-    ev252 = mn.get('ev252')
 
     for sw in mn.switches:
         sw.cmd('rm -rf /var/run/wpa_supplicant')
@@ -187,11 +185,6 @@ def main():
     pcap(auth, name='freeradius', intf='lo')
     pcap(auth, name='sdn-hostapd')
     pcap(scada)
-    pcap(ev1)
-    pcap(ev251)
-    pcap(ev252)
-
-    # mn.start()
 
     logger.info("*** Configuring bridge between 'auth' and 'controller'\n")
     s1.cmd('ifconfig s1 10.0.1.1 netmask 255.255.0.0')
@@ -226,15 +219,15 @@ def main():
     for sw in mn.switches:
         sw.cmd('screen -S scada -X quit')
         sw.cmd('pkill -2 wpa_supplicant')
-        sleep(2, sw.name + ' -> killing wpa')
         sw.cmd('pkill -2 hostapd')
-        sleep(2, sw.name + ' -> killing hostapd')
         sw.cmd('pkill -2 freeradius')
         sw.cmd('pkill -2 server_ied')
         sw.cmd('ovs-ofctl dump-flows ' + sw.name +
                ' > ' + LOGS + sw.name + '.log')
         sw.cmd('chmod +r ' + AUTH_LOGS + 'freeradius.log')
         sw.cmd('pkill -2 tcpdump')
+
+    sleep(4, 'Experiment')
 
     mn.stop()
 

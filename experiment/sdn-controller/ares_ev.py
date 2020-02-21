@@ -34,6 +34,10 @@ from ryu.ofproto.ether import ETH_TYPE_IP
 from datetime import datetime
 
 
+def ceil(dividend, divisor):
+    return -(-dividend // divisor)
+
+
 def ip_adder(value):
     # IP Address Adder for netmask /16
     rest, network, host = value.rsplit('.', 2)
@@ -67,15 +71,15 @@ for index in range(1, NUM_EV + 1):
     }
 
 mms_auth = {1: 1}
-for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+for index in range(2, ceil(NUM_EV, EV_BY_SW) + 2):
     mms_auth[index] = 1
 
 mms_controller = {1: ofproto_v1_3.OFPP_LOCAL}
-for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+for index in range(2, ceil(NUM_EV, EV_BY_SW) + 2):
     mms_controller[index] = 1
 
 mms_scada = {1: 2}
-for index in range(2, (NUM_EV // EV_BY_SW) + 2):
+for index in range(2, ceil(NUM_EV, EV_BY_SW) + 2):
     mms_scada[index] = 1
 
 
@@ -167,7 +171,7 @@ class StatsController(ControllerBase):
         self.waiters = data['waiters']
         self.authenticated = data['authenticated']
         self.switches = []
-        for index in range(1, (NUM_EV // EV_BY_SW) + 2):
+        for index in range(1, ceil(NUM_EV, EV_BY_SW) + 2):
             self.switches.append(self.dpset.get(index))
 
     def auth_user(self, req, mac, identity, **_kwargs):
@@ -216,8 +220,6 @@ class RestStatsApi(app_manager.RyuApp):
 
         LOG.info('>>> SDN Controller MAC ' + CONTROLLER_MAC)
 
-        LOG.info('>>>>>>>>>>>> %s' % evs)
-
         self.dpset = kwargs['dpset']
         wsgi = kwargs['wsgi']
         self.waiters = {}
@@ -245,7 +247,7 @@ class RestStatsApi(app_manager.RyuApp):
         # known hosts
         self.mac_to_port = {}
 
-        for index in range(1, (NUM_EV // EV_BY_SW) + 2):
+        for index in range(1, ceil(NUM_EV, EV_BY_SW) + 2):
             self.mac_to_port[index] = {
                 EAPOL_MAC: mms_auth[index],
                 AUTH_MAC: mms_auth[index],

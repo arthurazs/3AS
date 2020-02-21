@@ -1,5 +1,6 @@
 from asyncio import get_event_loop, start_server, sleep
 from struct import pack
+from datetime import datetime
 
 
 # https://tools.ietf.org/html/rfc1006
@@ -11,10 +12,10 @@ async def handle_echo(stream_in, stream_out):
                 0x02, 0x00, 0x01)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{addr} Sent: COTP')
+    print(f'{datetime.now()} {addr} Sent: COTP')
 
     data = await stream_in.read(1024)
-    print(f'{addr} Recv: COTP')
+    print(f'{datetime.now()} {addr} Recv: COTP')
 
     data = pack('187B', 0x03, 0x00, 0x00, 0xbb, 0x02, 0xf0, 0x80, 0x0d, 0xb2,
                 0x05, 0x06, 0x13, 0x01, 0x00, 0x16, 0x01, 0x02, 0x14, 0x02,
@@ -37,10 +38,10 @@ async def handle_echo(stream_in, stream_out):
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{addr} Sent: MMS-Initiate')
+    print(f'{datetime.now()} {addr} Sent: MMS-Initiate')
 
     data = await stream_in.read(1024)
-    print(f'{addr} Recv: MMS-Initiate')
+    print(f'{datetime.now()} {addr} Recv: MMS-Initiate')
 
     data = pack('72B', 0x03, 0x00, 0x00, 0x48, 0x02, 0xf0, 0x80, 0x01, 0x00,
                 0x01, 0x00, 0x61, 0x3b, 0x30, 0x39, 0x02, 0x01, 0x03, 0xa0,
@@ -52,10 +53,10 @@ async def handle_echo(stream_in, stream_out):
                 0x69, 0x6f, 0x6e)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{addr} Sent: MMS-Read >>> ChargingLD/DRCT.Comm.function')
+    print(f'{datetime.now()} {addr} Sent: MMS-Read >>> ChargingLD/DRCT.Comm.function')
 
     data = await stream_in.read(1024)
-    print(f'{addr} Recv: MMS-Read >>> Recharge')
+    print(f'{datetime.now()} {addr} Recv: MMS-Read >>> Recharge')
 
     data = pack('76B', 0x03, 0x00, 0x00, 0x4C,  # quantos bytes esse pack
                 0x02, 0xf0, 0x80, 0x01, 0x00, 0x01, 0x00,
@@ -82,16 +83,16 @@ async def handle_echo(stream_in, stream_out):
                 0xa0, 0x03, 0x85, 0x01, 0x02)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{addr} Sent: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
+    print(f'{datetime.now()} {addr} Sent: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
 
     data = await stream_in.read(1024)
-    print(f'{addr} Recv: MMS-Write >>> Success')
+    print(f'{datetime.now()} {addr} Recv: MMS-Write >>> Success')
 
     # TODO Check if this impacts the comm
-    await sleep(1)
+    # await sleep(1)
 
-    # print("Closing the client socket\n")
-    # stream_out.close()
+    print("Closing the client socket\n")
+    stream_out.close()
 
 loop = get_event_loop()
 coroutine = start_server(handle_echo, '10.0.1.3', 102, loop=loop)

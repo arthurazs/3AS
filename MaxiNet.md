@@ -69,3 +69,8 @@ screen -dm -S back sudo MaxiNetWorker
 ```bash
 screen -dm -S back sudo MaxiNetWorker
 ```
+
+<!--
+screen -S front MaxiNetFrontendServer
+screen -S back sudo MaxiNetWorker
+ -->
