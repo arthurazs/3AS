@@ -1,4 +1,4 @@
-from asyncio import get_event_loop, start_server, sleep
+from asyncio import get_event_loop, start_server
 from struct import pack
 from datetime import datetime
 
@@ -53,7 +53,9 @@ async def handle_echo(stream_in, stream_out):
                 0x69, 0x6f, 0x6e)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{datetime.now()} {addr} Sent: MMS-Read >>> ChargingLD/DRCT.Comm.function')
+    print(
+        f'{datetime.now()} {addr} '
+        'Sent: MMS-Read >>> ChargingLD/DRCT.Comm.function')
 
     data = await stream_in.read(1024)
     print(f'{datetime.now()} {addr} Recv: MMS-Read >>> Recharge')
@@ -83,13 +85,12 @@ async def handle_echo(stream_in, stream_out):
                 0xa0, 0x03, 0x85, 0x01, 0x02)
     stream_out.write(data)
     await stream_out.drain()
-    print(f'{datetime.now()} {addr} Sent: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
+    print(
+        f'{datetime.now()} {addr} '
+        'Sent: MMS-Write >>> BatteryLD/ZBTC.BatChaSt.setVal->2')
 
     data = await stream_in.read(1024)
     print(f'{datetime.now()} {addr} Recv: MMS-Write >>> Success')
-
-    # TODO Check if this impacts the comm
-    # await sleep(1)
 
     print("Closing the client socket\n")
     stream_out.close()

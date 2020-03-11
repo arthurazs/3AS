@@ -1,5 +1,5 @@
 from asyncio import open_connection, wait_for
-from asyncio import sleep, get_event_loop
+from asyncio import get_event_loop
 from struct import pack
 
 
@@ -62,9 +62,6 @@ async def tcp_echo_client(loop):
                 0x09, 0xa1, 0x07, 0x02, 0x01, 0x02, 0xa5, 0x02, 0x81, 0x00)
     stream_out.write(data)
     print('Sent: MMS-Write >>> Success')
-
-    # TODO Check if this impacts the comm
-    # await sleep(1)
 
     print('Closing the socket')
     stream_out.close()
