@@ -1,4 +1,4 @@
-from matplotlib.pyplot import bar, savefig, ylabel, subplots_adjust, show
+from matplotlib.pyplot import bar, savefig, ylabel, subplots_adjust
 from matplotlib import rc, rcParams
 from csv import reader
 from itertools import islice
@@ -44,11 +44,13 @@ blue = (0.2588, 0.4433, 1.0)
 
 # tshark -r logs/pcap/scada.pcap -T fields -e frame.time_epoch -e \
 # _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
-# _ws.col.Info  -E header=y -E separator=, -E quote=d > scada.csv
+# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, \
+# -E quote=d > scada.csv
 
 # tshark -r logs/pcap/sdn-hostapd.pcap -T fields -e frame.time_epoch -e \
 # _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
-# _ws.col.Info  -E header=y -E separator=, -E quote=d > sdn-hostapd.csv
+# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
+# > sdn-hostapd.csv
 
 NUM_EV = 3000
 evs = {}
@@ -114,28 +116,34 @@ with open('sdn-hostapd.csv') as csv_file:
                 evs[ev]['AUTH']['total'] = time - evs[ev]['AUTH']['start']
 
 
+of = []
 mms = []
 auth = []
 rest = []
-tot = []
+total = []
+apagar = []
 for ev, protocols in evs.items():
+    of.append(protocols['MMS']['start'] - protocols['REST']['finish'])
     mms.append(protocols['MMS']['total'])
     auth.append(protocols['AUTH']['total'])
     rest.append(protocols['REST']['total'])
-    tot.append(protocols['MMS']['finish'] - protocols['AUTH']['start'])
+    total.append(protocols['MMS']['finish'] - protocols['AUTH']['start'])
 
-auth_mean, auth_error = mean_confidence_interval(auth)
+of_mean, of_error = mean_confidence_interval(of)
 mms_mean, mms_error = mean_confidence_interval(mms)
+auth_mean, auth_error = mean_confidence_interval(auth)
 rest_mean, rest_error = mean_confidence_interval(rest)
-tot_mean, tot_error = mean_confidence_interval(tot)
+total_mean, total_error = mean_confidence_interval(total)
 
 bar('MMS', mms_mean, width, color=blue,
     edgecolor='black', yerr=mms_error)
-bar('Authentication', auth_mean, width, color=blue,
-    edgecolor='black', yerr=auth_error)
-bar('Rest API', rest_mean, width, color=blue,
+bar('Rest', rest_mean, width, color=blue,
     edgecolor='black', yerr=rest_error)
-bar('TOT', tot_mean, width, color=blue,
-    edgecolor='black', yerr=tot_error)
+bar('Auth', auth_mean, width, color=blue,
+    edgecolor='black', yerr=auth_error)
+bar('OF', of_mean, width, color=blue,
+    edgecolor='black', yerr=of_error)
+bar('Total', total_mean, width, color=blue,
+    edgecolor='black', yerr=total_error)
 
 savefig('3plot.png')
