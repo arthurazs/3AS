@@ -1,10 +1,15 @@
 from matplotlib.pyplot import plot, legend, savefig
 # from matplotlib.pyplot import annotate
-# from matplotlib.pyplot import xlim, ylim
+from matplotlib.pyplot import xlim  # , ylim
 from matplotlib.pyplot import xlabel, ylabel, subplots_adjust
 from matplotlib import rc, rcParams
 from csv import reader
 from itertools import islice
+
+
+def fix(bts, tms):
+    bts.insert(1, 0)
+    tms.insert(1, tms[1] - 0.01)
 
 
 rcParams['font.family'] = 'Times New Roman'
@@ -14,7 +19,7 @@ subplots_adjust(left=.06, bottom=.14, right=.98, top=.97)
 rc('savefig', dpi=300, format='png')
 rc('axes', autolimit_mode='round_numbers', xmargin=0, ymargin=0)
 # ylim(top=1500)
-# xlim(0, 110)
+xlim(2.05, 2.4)
 xlabel('Time (s)')
 ylabel('Throughput (kB/s)')
 
@@ -38,7 +43,7 @@ ylabel('Throughput (kB/s)')
 # _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
 # > openflow.csv
 
-STEP = .5
+STEP = 0
 start = None
 
 of_bytes = [0]
@@ -130,6 +135,11 @@ with open('freeradius.csv') as csv_file:
             radius_bytes.append(length)
             radius_step += STEP
 
+fix(auth_bytes, auth_time)
+fix(rest_bytes, rest_time)
+fix(scada_bytes, scada_time)
+fix(radius_bytes, radius_time)
+
 plot(
     auth_time, auth_bytes,  # linestyle='--', marker=None,
     label='Authentication')
@@ -153,4 +163,4 @@ plot(
 # )
 
 legend()
-savefig('4plot.png')
+savefig('4plot_zoom.png')

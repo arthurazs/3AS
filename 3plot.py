@@ -42,12 +42,12 @@ ylabel('Time (ms)')
 width = .5
 blue = (0.2588, 0.4433, 1.0)
 
-# tshark -r logs/pcap/scada.pcap -T fields -e frame.time_epoch -e \
+# tshark -r journal/scada.pcap -T fields -e frame.time_epoch -e \
 # _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
-# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, \
-# -E quote=d > scada.csv
+# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
+# > scada.csv
 
-# tshark -r logs/pcap/sdn-hostapd.pcap -T fields -e frame.time_epoch -e \
+# tshark -r journal/sdn-hostapd.pcap -T fields -e frame.time_epoch -e \
 # _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
 # _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
 # > sdn-hostapd.csv
@@ -71,7 +71,7 @@ with open('scada.csv') as csv_file:
     scada = reader(csv_file, delimiter=',')
 
     for row in islice(scada, 1, None):  # skip header
-        time, source, destination, protocol, info = row
+        time, source, destination, protocol, info, length = row
         time = float(time) * 1000
         ev = destination if source == scada_ip else source
         if ev not in evs:
@@ -80,20 +80,19 @@ with open('scada.csv') as csv_file:
             if protocol == 'MMS':
                 evs[ev]['MMS']['finish'] = time
                 evs[ev]['MMS']['total'] = time - evs[ev]['MMS']['start']
-        # print(time, source, destination, protocol, info)
 
 with open('sdn-hostapd.csv') as csv_file:
     hostapd = reader(csv_file, delimiter=',')
 
     rows = islice(hostapd, 1, None)
     for row in rows:  # skip header
-        time, source, destination, protocol, info = row
+        time, source, destination, protocol, info, length = row
         time = float(time) * 1000
         if protocol == 'TCP':
             start = time
             next(rows)
             next(rows)
-            info = next(rows)[-1]
+            info = next(rows)[-2]
             ev_mac = info.split('/')[2]
             ev_mac = ev_mac[:8] + '_' + ev_mac[9:]
             ev = mac2ip[ev_mac]
