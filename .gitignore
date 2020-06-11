@@ -1,6 +1,7 @@
 # logs
 *.pcap
 *.log
+journal.7z
 
 # python
 *.pyc

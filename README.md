@@ -62,6 +62,9 @@ cd 3AS
 sh run.sh
 ```
 
+## Dataset
+
+The experiments' data can be found on [Dropbox](https://www.dropbox.com/s/ygys4nawksqzepx/journal.7z?dl=0).
 <!--
 openssl x509 -in client.pem -text
 openssl rsa -in client.pem -text
