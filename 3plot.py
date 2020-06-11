@@ -42,16 +42,6 @@ ylabel('Time (ms)')
 width = .5
 blue = (0.2588, 0.4433, 1.0)
 
-# tshark -r journal/scada.pcap -T fields -e frame.time_epoch -e \
-# _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
-# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
-# > scada.csv
-
-# tshark -r journal/sdn-hostapd.pcap -T fields -e frame.time_epoch -e \
-# _ws.col.Source -e _ws.col.Destination  -e _ws.col.Protocol -e \
-# _ws.col.Info -e _ws.col.Length -E header=y -E separator=, -E quote=d \
-# > sdn-hostapd.csv
-
 NUM_EV = 3000
 evs = {}
 controller_mac = '10.0.1.1'
