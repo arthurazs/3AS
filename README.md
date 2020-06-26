@@ -65,6 +65,27 @@ sh run.sh
 ## Dataset
 
 The experiments' data can be found on [Dropbox](https://www.dropbox.com/s/ygys4nawksqzepx/journal.7z?dl=0).
+
+Download and unpack it into the 3AS/journal folder and rename it to `dataset`. Or:
+
+```bash
+apt install -y wget p7zip
+cd journal
+wget -O- https://www.dropbox.com/s/4rn550ucu09mcza/dataset.tar.xz?dl=1 | 7z x -si -txz -so | 7z x -si -ttar
+```
+
+To plot the graphs, run:
+
+```bash
+apt install -y tshark python3-tk  python3-pip
+pip3 install seaborn
+
+cd journal
+sh csv.sh
+
+python3 graph.py
+```
+
 <!--
 openssl x509 -in client.pem -text
 openssl rsa -in client.pem -text

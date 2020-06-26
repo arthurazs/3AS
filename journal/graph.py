@@ -6,7 +6,7 @@ from os.path import join as p_join
 evs = 1
 rep = 3
 logs = f'logs_{evs}_{rep}'
-folder = p_join(logs, 'pcap')
+folder = p_join('dataset', logs, 'pcap')
 
 radius = pd.read_csv(p_join(folder, 'freeradius.csv'))
 radius['csv'] = 'radius'

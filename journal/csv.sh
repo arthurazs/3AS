@@ -1,4 +1,4 @@
-prefix=logs_
+prefix=dataset/logs_
 
 for evs in 1 10 300 1000
 do
