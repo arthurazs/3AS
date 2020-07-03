@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt, rc
@@ -9,6 +10,8 @@ LOGS = f'logs_{EVS}_{REP}'
 FOLDER = p_join('dataset', LOGS, 'pcap')
 rc('savefig', format='pdf')
 
+
+# === FUNC ===
 
 def epoch_parser(epoch):
     return pd.to_datetime(epoch, unit='s')
@@ -32,9 +35,42 @@ def load_csv(name, proto=None):
     return dataframe
 
 
-def normalize_date(current_time, starting_time):
-    return (current_time.name - starting_time).total_seconds()
+def fix_sample(dataframe, interval, unit):
+    dataset = dataframe.copy(deep=True)
 
+    new_data = pd.DataFrame()
+
+    for _, row in dataset.iterrows():
+        if row.length > 0:
+            row.length = 0
+
+            before = row.name - pd.to_timedelta(interval, unit=unit)
+            row_before = pd.DataFrame([row], index=[before])
+
+            after = row.name + pd.to_timedelta(interval, unit=unit)
+            row_after = pd.DataFrame([row], index=[after])
+
+            new_data = pd.concat([new_data, row_before, row_after])
+
+    dataset = pd.concat([dataset, new_data], verify_integrity=True)
+
+    return dataset
+
+
+def normalize_time(dataframe):
+    def _normalize(current_time, starting_time):
+        return (current_time.name - starting_time).total_seconds()
+
+    dataset = dataframe.copy(deep=True)
+    first_occurrence = dataset.index.min()
+
+    dataset['time'] = dataset.apply(
+        _normalize, axis=1,
+        args=[first_occurrence])
+    return dataset
+
+
+# === CODE ===
 
 print('loading datasets...')
 radius = load_csv('freeradius', 'radius')
@@ -44,12 +80,7 @@ hostapd = load_csv('sdn-hostapd', 'hostapd')
 print('loaded\n')
 
 print('concatenating datasets...')
-auth_tuple = (
-    radius,
-    openflow,
-    scada,
-    hostapd,
-)
+auth_tuple = (radius, openflow, scada, hostapd)
 authentication = pd.concat(auth_tuple)
 print('concatenated\n')
 
@@ -59,70 +90,46 @@ authentication.sort_index(inplace=True)
 print('setted\n')
 
 print('resampling data...')
-authentication = authentication.groupby(
-    ['csv', 'protocol']).resample('100us').sum()
-authentication.reset_index(['csv', 'protocol'], inplace=True)
+print(authentication.shape)
+authentication = fix_sample(authentication, 1, 'ms')
 authentication.sort_index(inplace=True)
-time_of_first_occurrence = authentication.index.min()
+print(authentication.shape)
 print('resampled\n')
 
 print('normalizing date...')
-authentication['time'] = authentication.apply(
-    normalize_date, axis=1,
-    args=[time_of_first_occurrence])
+authentication = normalize_time(authentication)
 print('normalized\n')
 
-print('adding missing data...')
-authentication['prev_length'] = authentication.length.shift(1)
-authentication['next_length'] = authentication.length.shift(-1)
-print('WARNING this is not working properly')  # TODO Fix
-# maybe add protocol for prev/next
-authentication = authentication.query(
-    'length != 0 or '
-    '(next_length != 0 or prev_length != 0)')
-print('added\n')
-
-# print('normalizing date again...')
-# partial_auth = authentication.query('time > 2').drop('time', axis=1)
-# partial_auth['time'] = partial_auth.index
-# starting_time = partial_auth.index.min()
-# partial_auth.time = partial_auth.time.apply(lambda x: x - starting_time)
-# partial_auth.time = partial_auth.time.abs().dt.total_seconds()
-# print(partial_auth)
-# print('normalized\n')
+print('sampling down...')
+print(authentication.shape)
+partial = normalize_time(
+    authentication.query('time > 1 and time < 4').drop(columns='time'))
+print(partial.shape)
+print('sampled\n')
 
 print('plotting...')
 # TODO
 # Validar suavização com pandas utilizando media dos protocolos
 sns.set_style('whitegrid')
 # https://seaborn.pydata.org/tutorial/color_palettes.html
-# sns.set_palette('Blues', 3)
-protocol_list = [
-    'COTP',
-    'EAP',
-    # 'EAPOL',
-    'HTTP',
-    'MMS',
-    'OpenFlow',
-    # 'RADIUS',
-    'TCP',
-    'TLSv1',
-    'TLSv1.2',
-]
-csv_list = [
-    'hostapd',
-    'openflow',
-    # 'radius',
-    'scada',
-]
+
+protocol_list = partial.protocol.unique()
+protocol_list = protocol_list[
+    (protocol_list != 'EAPOL') & (protocol_list != 'RADIUS')]
+
+csv_list = partial.csv.unique()
+csv_list = csv_list[csv_list != 'radius']
+
+# sns.set_palette('Blues', len(protocol_list))
+sns.set_palette('Blues', len(csv_list))
+
 sns.lineplot(
     x='time', y='length',
-    hue='protocol', style='csv',
-    hue_order=protocol_list, style_order=csv_list,
-    # hue='csv',
-    # hue_order=csv_list,
-    # data=partial_auth.query('time < .5'))
-    data=authentication.query('time >= 2 and time <= 2.5'))
+    # hue='protocol', style='csv',
+    # hue_order=protocol_list, style_order=csv_list,
+    hue='csv',
+    hue_order=csv_list,
+    data=partial)
 
 # todo
 # tamanho boxplot
