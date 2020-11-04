@@ -1,14 +1,17 @@
-import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt, rc
 from os.path import join as p_join
 
 EVS = 1
-REP = 3
+REP = 5
 LOGS = f'logs_{EVS}_{REP}'
 FOLDER = p_join('dataset', LOGS, 'pcap')
 rc('savefig', format='pdf')
+rc('figure', figsize=[10, 3])
+plt.subplots_adjust(top=0.95,
+                    left=0.07, right=0.98,
+                    bottom=0.2)
 
 
 # === FUNC ===
@@ -20,11 +23,11 @@ def epoch_parser(epoch):
 def load_csv(name, proto=None):
     if not proto:
         proto = name
-    dataframe = pd.read_csv(p_join(FOLDER, f'{name}.csv'),
-                            parse_dates=[0], date_parser=epoch_parser)
-    dataframe['csv'] = proto
+    data_frame = pd.read_csv(p_join(FOLDER, f'{name}.csv'), parse_dates=[0],
+                             date_parser=epoch_parser)
+    data_frame['Process'] = proto
 
-    dataframe.rename(inplace=True, columns={
+    data_frame.rename(inplace=True, columns={
         'frame.time_epoch': 'datetime',
         '_ws.col.Source': 'source',
         '_ws.col.Destination': 'destination',
@@ -32,15 +35,18 @@ def load_csv(name, proto=None):
         '_ws.col.Length': 'length',
         '_ws.col.Info': 'information'})
 
-    return dataframe
+    # data_frame.length = data_frame.length.apply(lambda x: x / 1000)
+    data_frame.length = data_frame.length.apply(lambda x: x / 1000)
+
+    return data_frame
 
 
-def fix_sample(dataframe, interval, unit):
-    dataset = dataframe.copy(deep=True)
+def fix_sample(data_frame, interval, unit):
+    data_set = data_frame.copy(deep=True)
 
     new_data = pd.DataFrame()
 
-    for _, row in dataset.iterrows():
+    for _, row in data_set.iterrows():
         if row.length > 0:
             row.length = 0
 
@@ -52,31 +58,31 @@ def fix_sample(dataframe, interval, unit):
 
             new_data = pd.concat([new_data, row_before, row_after])
 
-    dataset = pd.concat([dataset, new_data], verify_integrity=True)
+    data_set = pd.concat([data_set, new_data], verify_integrity=True)
 
-    return dataset
+    return data_set
 
 
-def normalize_time(dataframe):
+def normalize_time(data_frame):
     def _normalize(current_time, starting_time):
         return (current_time.name - starting_time).total_seconds()
 
-    dataset = dataframe.copy(deep=True)
-    first_occurrence = dataset.index.min()
+    data_set = data_frame.copy(deep=True)
+    first_occurrence = data_set.index.min()
 
-    dataset['time'] = dataset.apply(
+    data_set['time'] = data_set.apply(
         _normalize, axis=1,
         args=[first_occurrence])
-    return dataset
+    return data_set
 
 
 # === CODE ===
 
 print('loading datasets...')
-radius = load_csv('freeradius', 'radius')
-openflow = load_csv('openflow')
-scada = load_csv('scada')
-hostapd = load_csv('sdn-hostapd', 'hostapd')
+radius = load_csv('freeradius', 'Authentication')
+openflow = load_csv('openflow', 'SDN')
+scada = load_csv('scada', 'MMS')
+hostapd = load_csv('sdn-hostapd', 'Authentication')
 print('loaded\n')
 
 print('concatenating datasets...')
@@ -102,8 +108,10 @@ print('normalized\n')
 
 print('sampling down...')
 print(authentication.shape)
+partial = authentication
 partial = normalize_time(
-    authentication.query('time > 1 and time < 4').drop(columns='time'))
+    authentication.query('time > 1 and time < 2.3').drop(columns='time'))
+# partial = authentication.query('time >= 2 and time <= 2.2')
 print(partial.shape)
 print('sampled\n')
 
@@ -117,19 +125,27 @@ protocol_list = partial.protocol.unique()
 protocol_list = protocol_list[
     (protocol_list != 'EAPOL') & (protocol_list != 'RADIUS')]
 
-csv_list = partial.csv.unique()
+csv_list = partial.Process.unique()
 csv_list = csv_list[csv_list != 'radius']
 
 # sns.set_palette('Blues', len(protocol_list))
-sns.set_palette('Blues', len(csv_list))
+sns.set_palette('mako', len(csv_list))
+
 
 sns.lineplot(
     x='time', y='length',
-    # hue='protocol', style='csv',
+    # hue='protocol', style='Process',
     # hue_order=protocol_list, style_order=csv_list,
-    hue='csv',
+
+    style='Process',
+    style_order=csv_list,
+
+    hue='Process',
     hue_order=csv_list,
     data=partial)
+
+plt.ylabel('Throughput (kBytes/s)')
+plt.xlabel('Time (s)')
 
 # todo
 # tamanho boxplot
@@ -143,6 +159,6 @@ sns.lineplot(
 # - olhar quanto tempo leva cada evento
 # - sabe-se a sequência de eventos (tempo total)
 
-plt.show()
-# plt.savefig('test.pdf')
-print('plotted')
+# plt.show()
+plt.savefig('seqOfEvents.pdf')
+# print('plotted')
