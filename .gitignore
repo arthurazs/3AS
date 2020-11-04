@@ -24,3 +24,6 @@ serial.old
 # graphs
 *.png
 *.csv
+
+# pycharm
+.idea
