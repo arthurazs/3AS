@@ -25,7 +25,8 @@ def load_csv(name, proto=None):
         proto = name
     data_frame = pd.read_csv(p_join(FOLDER, f'{name}.csv'), parse_dates=[0],
                              date_parser=epoch_parser)
-    data_frame['Process'] = proto
+
+    data_frame['Traffic'] = proto
 
     data_frame.rename(inplace=True, columns={
         'frame.time_epoch': 'datetime',
@@ -35,8 +36,11 @@ def load_csv(name, proto=None):
         '_ws.col.Length': 'length',
         '_ws.col.Info': 'information'})
 
+    # if name == 'sdn-hostapd':
+    #     data_frame.loc[data_frame['protocol'] == 'TCP', 'Traffic'] = 'API'
+    #     data_frame.loc[data_frame['protocol'] == 'HTTP', 'Traffic'] = 'API'
+
     # data_frame.length = data_frame.length.apply(lambda x: x / 1000)
-    data_frame.length = data_frame.length.apply(lambda x: x / 1000)
 
     return data_frame
 
@@ -80,7 +84,7 @@ def normalize_time(data_frame):
 
 print('loading datasets...')
 radius = load_csv('freeradius', 'Authentication')
-openflow = load_csv('openflow', 'SDN')
+openflow = load_csv('openflow', 'OpenFlow')
 scada = load_csv('scada', 'MMS')
 hostapd = load_csv('sdn-hostapd', 'Authentication')
 print('loaded\n')
@@ -111,54 +115,40 @@ print(authentication.shape)
 partial = authentication
 partial = normalize_time(
     authentication.query('time > 1 and time < 2.3').drop(columns='time'))
-# partial = authentication.query('time >= 2 and time <= 2.2')
 print(partial.shape)
 print('sampled\n')
 
 print('plotting...')
-# TODO
-# Validar suavização com pandas utilizando media dos protocolos
 sns.set_style('whitegrid')
-# https://seaborn.pydata.org/tutorial/color_palettes.html
 
 protocol_list = partial.protocol.unique()
 protocol_list = protocol_list[
     (protocol_list != 'EAPOL') & (protocol_list != 'RADIUS')]
 
-csv_list = partial.Process.unique()
-csv_list = csv_list[csv_list != 'radius']
+csv_list = partial.Traffic.unique()
+# csv_list = csv_list[csv_list != 'radius']
 
-# sns.set_palette('Blues', len(protocol_list))
 sns.set_palette('mako', len(csv_list))
-
 
 sns.lineplot(
     x='time', y='length',
-    # hue='protocol', style='Process',
-    # hue_order=protocol_list, style_order=csv_list,
-
-    style='Process',
+    style='Traffic',
     style_order=csv_list,
-
-    hue='Process',
+    hue='Traffic',
     hue_order=csv_list,
     data=partial)
 
-plt.ylabel('Throughput (kBytes/s)')
+plt.ylabel('Throughput (Bytes/s)')
 plt.xlabel('Time (s)')
 
-# todo
-# tamanho boxplot
-# - fazer boxplot pro tamanho dos pacotes
-# tempo amostra (regplot?)
-# - colocar só os pontos (amostras, sem as retas)
-# - 'fiz essa sequência de eventos várias vezes e a dispersão fica assim'
-# - pintar os pontos pra simbolizar partes do evento
-# - 'inicio de X, fim de X'
-# tempo boxplot?
-# - olhar quanto tempo leva cada evento
-# - sabe-se a sequência de eventos (tempo total)
+ax = plt.gca()
+ax.annotate('Authentication starts', xy=(0, 50), xytext=(-0.003, 500),
+            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
+ax.annotate('EV authenticated', xy=(.038, 250), xytext=(.0365, 750),
+            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
+ax.annotate('3AS informs ARES', xy=(.0405, 250), xytext=(.042, 500),
+            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
+ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.065, 375),
+            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
 
-# plt.show()
-plt.savefig('seqOfEvents.pdf')
-# print('plotted')
+plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
