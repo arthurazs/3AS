@@ -4,10 +4,11 @@ from matplotlib import pyplot as plt, rc
 from os.path import join as p_join
 
 rc('savefig', format='pdf')
+rc('font', size=13)
 rc('figure', figsize=[4, 3])
-plt.subplots_adjust(top=0.95,
-                    left=0.1, right=0.98,
-                    bottom=0.2)
+plt.subplots_adjust(top=0.99,
+                    left=0.11, right=0.99,
+                    bottom=0.16)
 
 
 # === FUNC ===
@@ -120,6 +121,7 @@ def load(evs, rep, verbose=False):
 
 def load_all():
     dataset = pd.DataFrame()
+    # for ev in [1, 10]:
     for ev in [1, 10, 300, 1000]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
@@ -148,16 +150,18 @@ print('plotting...')
 sns.set_palette('mako', 4)
 
 data_order = ['OpenFlow', 'API', 'EAPoL', 'RADIUS']
+# sns.boxplot(x='Traffic', y='length',
 sns.barplot(x='Traffic', y='length',
-            data=dataset, errwidth=1, capsize=.02, edgecolor='.2',
+            data=dataset,
+            errwidth=1, capsize=.1, edgecolor='.2',
             order=data_order)
 plt.ylabel('Control Load (kBytes)')
 plt.ylim(0, 9.5)
 # plt.xlabel('Time (s)')
 
-ax.annotate('Authentication', xy=(2, 8.3), xytext=(2, 8.9),
+ax.annotate('Authentication', xy=(2, 8.3), xytext=(2, 8.8),
             ha='center', va='bottom',
-            arrowprops=dict(arrowstyle='-[, widthB=9.1, lengthB=0.5', color='black'))
+            arrowprops=dict(arrowstyle='-[, widthB=7.1, lengthB=0.5', color='black'))
 
 # todo
 # tamanho boxplot

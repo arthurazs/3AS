@@ -8,10 +8,10 @@ REP = 5
 LOGS = f'logs_{EVS}_{REP}'
 FOLDER = p_join('dataset', LOGS, 'pcap')
 rc('savefig', format='pdf')
-rc('figure', figsize=[10, 3])
-plt.subplots_adjust(top=0.95,
-                    left=0.07, right=0.98,
-                    bottom=0.2)
+rc('figure', figsize=[10, 2.6])
+plt.subplots_adjust(top=.98,
+                    left=0.06, right=0.995,
+                    bottom=0.165)
 
 
 # === FUNC ===
@@ -40,7 +40,7 @@ def load_csv(name, proto=None):
     #     data_frame.loc[data_frame['protocol'] == 'TCP', 'Traffic'] = 'API'
     #     data_frame.loc[data_frame['protocol'] == 'HTTP', 'Traffic'] = 'API'
 
-    # data_frame.length = data_frame.length.apply(lambda x: x / 1000)
+    data_frame.length = data_frame.length.apply(lambda x: x / 1000)
 
     return data_frame
 
@@ -138,17 +138,18 @@ sns.lineplot(
     hue_order=csv_list,
     data=partial)
 
-plt.ylabel('Throughput (Bytes/s)')
+plt.ylabel('Throughput (kBytes/s)')
 plt.xlabel('Time (s)')
+plt.yticks([0, .25, .5, .75, 1, 1.25, 1.5])
 
 ax = plt.gca()
-ax.annotate('Authentication starts', xy=(0, 50), xytext=(-0.003, 500),
+ax.annotate('Authentication starts', xy=(0, .050), xytext=(-0.003, .35),
             arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
-ax.annotate('EV authenticated', xy=(.038, 250), xytext=(.0365, 750),
+ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6),
             arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
-ax.annotate('3AS informs ARES', xy=(.0405, 250), xytext=(.042, 500),
+ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4),
             arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
-ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.065, 375),
+ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.07, .3),
             arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
 
 plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
