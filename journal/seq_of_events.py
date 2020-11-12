@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt, rc
 from os.path import join as p_join
@@ -140,16 +141,25 @@ sns.lineplot(
 
 plt.ylabel('Throughput (kBytes/s)')
 plt.xlabel('Time (s)')
-plt.yticks([0, .25, .5, .75, 1, 1.25, 1.5])
+plt.yticks(np.arange(0, 1.75, .25))
+plt.xticks(np.arange(0, .1, .01))
 
 ax = plt.gca()
-ax.annotate('Authentication starts', xy=(0, .050), xytext=(-0.003, .35),
-            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
-ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6),
-            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=.3"))
-ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4),
-            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
-ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.07, .3),
-            arrowprops=dict(arrowstyle="->", color='black', connectionstyle="arc3,rad=-.3"))
+
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles=handles[1:], labels=labels[1:], title="Traffic", title_fontsize='large')
+ax.get_legend()._legend_box.align = "left"
+
+box_style = {'boxstyle': 'round', 'fc': 'w', 'color': 'grey'}
+arrow_style = {'arrowstyle': '->', 'color': 'black'}
+
+ax.annotate('Authentication starts', xy=(0, .050), xytext=(-0.003, .35), bbox=box_style,
+            arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
+ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6), bbox=box_style,
+            arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
+ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4), bbox=box_style,
+            arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
+ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.07, .3), bbox=box_style,
+            arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
 
 plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
