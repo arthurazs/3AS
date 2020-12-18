@@ -5,8 +5,8 @@ from os.path import join as p_join
 
 rc('savefig', format='pdf')
 rc('font', size=13)
-rc('figure', figsize=[4, 3])
-plt.subplots_adjust(top=0.99,
+rc('figure', figsize=[6, 3])
+plt.subplots_adjust(top=0.9,
                     left=0.11, right=0.99,
                     bottom=0.16)
 
@@ -94,14 +94,6 @@ def helper(data_frame, query):
     return value, address, new_data_frame
 
 
-# def ip_adder(value):  # INCORRECT!
-#     # IP Address Adder for netmask /16
-#     rest, network, host = value.rsplit('.', 2)
-#     host = (int(host) % 254) + 1
-#     network = int(network) + int(host == 1)
-#     return rest + '.' + str(network) + '.' + str(host)
-
-
 def mac_adder(value):  # INCORRECT!
     # MAC Address Adder
     rest, network, host = value.rsplit(':', 2)
@@ -112,20 +104,7 @@ def mac_adder(value):  # INCORRECT!
     return rest + ':' + network + ':' + host
 
 
-# mac2ip = {}
-# previous_mac = '00:00:00_00:00:03'
-# previous_ip = '10.0.1.3'
-# for _ in range(4, 1004):
-#
-#     # TODO we have to use the wrong func here bc our experiment is already done
-#     # TODO                  f'00:00:00:00:{index // 256:02x}:{index % 256:02x}'
-#     mac = mac_adder(previous_mac)  # TODO this mac_adder is incorrect, use above
-#     ip = ip_adder(previous_ip)  # TODO same as above, ip_adder is incorrect
-#     mac2ip[mac] = ip
-#     previous_mac, previous_ip = mac, ip
-
-
-def load(evs, rep, verbose=False):
+def parse_one(evs, rep, verbose=False):
     if verbose:
         print('loading datasets...')
     # radius = load_csv('freeradius', 'RADIUS', evs, rep)
@@ -152,83 +131,90 @@ def load(evs, rep, verbose=False):
         print('sampling down...')
         print(authentication.shape)
 
-    this_rep = pd.DataFrame()
+    # this_rep = pd.DataFrame()
     current_ev = 0
+    counter = 0
     current_mac = '00:00:00:00:00:03'
+    aux = {}
     for _ in range(4, evs + 4):
         current_mac = mac_adder(current_mac)
-        # current_ip = mac2ip[current_mac]
-
         openflow_start = authentication.query(
             'Traffic == "OpenFlow" and eapol_type == 1 and information == "Type: OFPT_PACKET_IN" '
             f'and eth_src == "00:00:00:00:00:00,{current_mac}"')['time'].values[0]
         mms_start = authentication.query(
             'Traffic == "MMS" and length == 0.074 and protocol == "TCP" and '
             f'eth_src == "{current_mac}"')['time'].values[0]
-        # eapol_start, _, authentication = helper(
-        #     authentication, f'Traffic == "EAPoL" and source == "{current_mac}"')
-        # mms_start, _, authentication = helper(
-        #     authentication, f'Traffic == "MMS" and source == "{current_ip}"')
 
-        aux = pd.DataFrame()
         current_ev += 1
-        aux['evs'] = [evs]
-        aux['rep'] = [rep]
-        aux['ev'] = [current_ev]
-        aux['start'] = [openflow_start]
-        aux['end'] = [mms_start]
-        aux['delay'] = [mms_start - openflow_start]
-        this_rep = this_rep.append(aux, ignore_index=True)
-        # TODO media de todos veiculos no experimento + media por experimento?
-        # TODO e se colocar a media separada por veiculo num grafico de pontos e tals
-    # return this_rep
-    return this_rep.sort_values(by='start')
+        counter += 1
+        row = {'evs': evs, 'rep': rep, 'ev': current_ev,
+               'start': openflow_start, 'end': mms_start,
+               'delay': mms_start - openflow_start}
+        aux[counter] = row
+    this_rep = pd.DataFrame().from_dict(aux, 'index')
+    # TODO media de todos veiculos no experimento + media por experimento?
+    # TODO e se colocar a media separada por veiculo num grafico de pontos e tals
+    this_rep.sort_values(by='start', inplace=True)
+    this_rep.reset_index(drop=True, inplace=True)
+    return this_rep
 
 
-def load_all():
+def parse_all():
     loaded_dataset = pd.DataFrame()
     # for ev in [1, 10, 300, 1000]:
-    for ev in [1000]:
+    for ev in [10, 300, 1000]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
-            q = load(ev, reps, verbose=False)
-            print(q)
-            exit()
-            # q.reset_index(inplace=True)
-            q = q.loc['length']
-            for name, length in q.items():
-                aux = pd.DataFrame()
-                aux['evs'] = [ev]
-                aux['length'] = [length]
-                aux['Traffic'] = [name]
-                loaded_dataset = loaded_dataset.append(aux, ignore_index=True)
+            q = parse_one(ev, reps, verbose=False)
+            loaded_dataset = loaded_dataset.append(q, ignore_index=True)
     return loaded_dataset
 
 
+def load():
+    print('loading...')
+    return pd.read_csv('all_experiments.csv')
+
 # === CODE ===
 
-sns.set_style('whitegrid')
+sns.set_style('darkgrid')
 ax = plt.gca()
 
-dataset = load_all()
-print(dataset)    # 2.13
+# dataset = parse_all()
+# dataset.to_csv('all_experiments.csv')
+dataset = load()
+dataset.query('evs == 300 and rep == 8 and (start <= 6.4 or end <= 6.4)', inplace=True)
+dataset.sort_values(by='start')
+vehicles = {}
+counter = 0
+for index, row in dataset.iterrows():
+    vehicles[counter] = {'ev': int(row.ev), 'time': row.start}
+    counter += 1
+    vehicles[counter] = {'ev': int(row.ev), 'time': row.end}
+    counter += 1
+vehicles = pd.DataFrame().from_dict(vehicles, 'index')
+sns.lineplot(x='time', y='ev', data=vehicles, style='ev',
+             markers=['o'] * (len(vehicles) // 2), dashes=False)
+plt.show()
+print(vehicles)
+exit()
+print(dataset)
+# sns.lineplot(x='start', y='ev', data=dataset)
+# sns.lineplot(x='end', y='ev', data=dataset)
+asd = pd.DataFrame().from_dict({'ev': [1, 1, 2, 2, 3, 3], 'time': [10, 20, 15, 25, 14, 22]})
+sns.lineplot(x='time', y='ev', data=asd, hue='ev', style='ev', markers=['o', 'o', 'o'], dashes=False)
+plt.show()
+exit()
 print('plotting...')
 sns.set_palette('mako', 4)
 
-# data_order = ['OpenFlow', 'API', 'EAPoL', 'RADIUS']
-# sns.boxplot(x='Traffic', y='length',
-sns.barplot(x='evs', y='length',
-            data=dataset,
-            errwidth=1, capsize=.1, edgecolor='.2',
-            # order=data_order)
-            )
-plt.ylabel('Control Load (kBytes)')
-plt.ylim(0, 9.5)
-# plt.xlabel('Time (s)')
-
-# ax.annotate('Authentication', xy=(2, 8.3), xytext=(2, 8.8),
-#             ha='center', va='bottom',
-#             arrowprops=dict(arrowstyle='-[, widthB=7.1, lengthB=0.5', color='black'))
+# query = 'evs == 1000'
+# sns.boxplot(x='rep', y='delay', data=dataset.query(query))
+sns.boxplot(x='evs', y='delay', data=dataset, width=.5)
+# ax.set_yscale('logit')
+# plt.title(query)
+plt.title('all')
+plt.show()
+exit()
 
 # todo
 # tamanho boxplot
