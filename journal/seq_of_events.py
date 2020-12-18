@@ -119,6 +119,8 @@ partial = normalize_time(
 print(partial.shape)
 print('sampled\n')
 
+# partial.time = partial.time * 1000
+
 print('plotting...')
 sns.set_style('whitegrid')
 
@@ -147,19 +149,19 @@ plt.xticks(np.arange(0, .1, .01))
 ax = plt.gca()
 
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles=handles[1:], labels=labels[1:], title="Traffic", title_fontsize='large')
+ax.legend(handles=handles, labels=labels, title="Traffic", title_fontsize='large')
 ax.get_legend()._legend_box.align = "left"
 
 box_style = {'boxstyle': 'round', 'fc': 'w', 'color': 'grey'}
 arrow_style = {'arrowstyle': '->', 'color': 'black'}
 
-ax.annotate('Authentication starts', xy=(0, .050), xytext=(-0.003, .35), bbox=box_style,
+ax.annotate('Authentication starts', xy=(0, .05), xytext=(-.003, .35), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
 ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
 ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
-ax.annotate('SCADA opens connection', xy=(0.085, 0), xytext=(.07, .3), bbox=box_style,
+ax.annotate('SCADA opens connection', xy=(.085, 0), xytext=(.07, .3), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
 
 plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
