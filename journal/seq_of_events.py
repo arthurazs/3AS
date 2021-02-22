@@ -161,7 +161,7 @@ ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6), bbox=box_sty
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
 ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
-ax.annotate('SCADA opens connection', xy=(.085, 0), xytext=(.07, .3), bbox=box_style,
+ax.annotate('SCADA accepts connection', xy=(.085, 0), xytext=(.07, .3), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
 
 plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
