@@ -209,7 +209,10 @@ def main():
     logger.info("*** Starting EVs\n")
     for ev in evs:
         wpa(ev)
-        sleep(.1, ev.name)
+
+    sleep(1, 'Experiment')
+
+    for ev in evs:
         wpa_cli(ev, 'ev.sh', ev.name)
 
     logger.info("*** Running experiment\n")
