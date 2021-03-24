@@ -57,7 +57,7 @@ def freeradius(node):
 
 
 def wpa(node):
-    command = 'wpa_supplicant -i ' + str(node.intfNames()[0]) + ' -D wired'
+    command = 'wpa_supplicant -W -i ' + str(node.intfNames()[0]) + ' -D wired'
     config = '-c ' + IEDS_ROOT + 'evs/' + node.name + '.conf -dd -f'
     log = AUTH_LOGS + 'wpa-' + node.name + '.log &'
     node.cmdPrint(command, config, log)
@@ -207,9 +207,10 @@ def main():
         '-S scada -dm python3 ' + IEDS_ROOT + 'scada.py')
 
     logger.info("*** Starting EVs\n")
+    sleep(1, 'Starting EVs')
     for ev in evs:
         wpa(ev)
-
+    
     sleep(1, 'Experiment')
 
     for ev in evs:
@@ -221,7 +222,7 @@ def main():
     logger.info("*** Finishing experiment\n")
     for sw in mn.switches:
         sw.cmd('screen -S scada -X quit')
-        sw.cmd('pkill -2 wpa_supplicant')
+        sw.cmd("kill -2 $(ps aux | grep '[w]ired' | awk '{print $2}')")
         sw.cmd('pkill -2 hostapd')
         sw.cmd('pkill -2 freeradius')
         sw.cmd('pkill -2 server_ied')
@@ -230,7 +231,7 @@ def main():
         sw.cmd('chmod +r ' + AUTH_LOGS + 'freeradius.log')
         sw.cmd('pkill -2 tcpdump')
 
-    sleep(4, 'Experiment')
+    sleep(5, 'Experiment')
 
     mn.stop()
 
