@@ -5,9 +5,9 @@ from os.path import join as p_join
 
 rc('savefig', format='pdf')
 rc('font', size=13)
-rc('figure', figsize=[6, 3])
-plt.subplots_adjust(top=0.9,
-                    left=0.11, right=0.99,
+rc('figure', figsize=[4, 3])
+plt.subplots_adjust(top=0.98,
+                    left=0.16, right=0.99,
                     bottom=0.16)
 
 
@@ -162,7 +162,7 @@ def parse_one(evs, rep, verbose=False):
 def parse_all():
     loaded_dataset = pd.DataFrame()
     # for ev in [1, 10, 300, 1000]:
-    for ev in [10, 300, 1000]:
+    for ev in [1, 10, 25, 50, 100, 150]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
             q = parse_one(ev, reps, verbose=False)
@@ -174,46 +174,30 @@ def load():
     print('loading...')
     return pd.read_csv('all_experiments.csv')
 
+
 # === CODE ===
 
-sns.set_style('darkgrid')
+sns.set_style('whitegrid')
 ax = plt.gca()
 
 # dataset = parse_all()
-# dataset.to_csv('all_experiments.csv')
-dataset = load()
-dataset.query('evs == 300 and rep == 8 and (start <= 6.4 or end <= 6.4)', inplace=True)
-dataset.sort_values(by='start')
-vehicles = {}
-counter = 0
-for index, row in dataset.iterrows():
-    vehicles[counter] = {'ev': int(row.ev), 'time': row.start}
-    counter += 1
-    vehicles[counter] = {'ev': int(row.ev), 'time': row.end}
-    counter += 1
-vehicles = pd.DataFrame().from_dict(vehicles, 'index')
-sns.lineplot(x='time', y='ev', data=vehicles, style='ev',
-             markers=['o'] * (len(vehicles) // 2), dashes=False)
-plt.show()
-print(vehicles)
-exit()
-print(dataset)
-# sns.lineplot(x='start', y='ev', data=dataset)
-# sns.lineplot(x='end', y='ev', data=dataset)
-asd = pd.DataFrame().from_dict({'ev': [1, 1, 2, 2, 3, 3], 'time': [10, 20, 15, 25, 14, 22]})
-sns.lineplot(x='time', y='ev', data=asd, hue='ev', style='ev', markers=['o', 'o', 'o'], dashes=False)
-plt.show()
-exit()
+# dataset.to_csv('all_experiments_delay.csv')
+# exit()
+print('loading...')
+dataset = pd.read_csv('all_experiments_delay.csv')
 print('plotting...')
-sns.set_palette('mako', 4)
+sns.set_palette('mako', 5)
 
-# query = 'evs == 1000'
-# sns.boxplot(x='rep', y='delay', data=dataset.query(query))
-sns.boxplot(x='evs', y='delay', data=dataset, width=.5)
-# ax.set_yscale('logit')
-# plt.title(query)
-plt.title('all')
-plt.show()
+query = 'evs != 25'
+dataset.delay = dataset.delay * 1000
+# sns.boxplot(x='evs', y='delay', data=dataset, width=.5)
+sns.boxplot(x='evs', y='delay', data=dataset.query(query), width=.5)
+# sns.jointplot(x=dataset.query(query).evs, kind='hex', y=dataset.query(query).delay)
+plt.ylabel('Delay (ms)')
+plt.xlabel('Number of EVs')
+# plt.show()
+plt.savefig('timeDelay')
+
 exit()
 
 # todo
@@ -228,6 +212,6 @@ exit()
 # - olhar quanto tempo leva cada evento
 # - sabe-se a sequência de eventos (tempo total)
 
-plt.savefig(f'timeDelay.pdf')
-# plt.show()
+# plt.savefig(f'timeDelay.pdf')
+plt.show()
 print('plotted')

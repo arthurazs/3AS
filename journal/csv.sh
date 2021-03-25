@@ -1,6 +1,6 @@
 prefix=dataset/logs_
 
-for evs in 1 10 300 1000
+for evs in 1 10 25 50 100 150
 do
     for rep in $(seq 1 10)
     do

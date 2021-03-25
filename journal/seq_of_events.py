@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt, rc
 from os.path import join as p_join
 
 EVS = 1
-REP = 5
+REP = 8
 LOGS = f'logs_{EVS}_{REP}'
 FOLDER = p_join('dataset', LOGS, 'pcap')
 rc('savefig', format='pdf')
@@ -115,7 +115,8 @@ print('sampling down...')
 print(authentication.shape)
 partial = authentication
 partial = normalize_time(
-    authentication.query('time > 1 and time < 2.3').drop(columns='time'))
+    # authentication.drop(columns='time'))
+    authentication.query('time > 3 and time < 3.3').drop(columns='time'))
 print(partial.shape)
 print('sampled\n')
 
@@ -144,7 +145,7 @@ sns.lineplot(
 plt.ylabel('Throughput (kBytes/s)')
 plt.xlabel('Time (s)')
 plt.yticks(np.arange(0, 1.75, .25))
-plt.xticks(np.arange(0, .1, .01))
+plt.xticks(np.arange(0, .131, .01))
 
 ax = plt.gca()
 
@@ -157,11 +158,11 @@ arrow_style = {'arrowstyle': '->', 'color': 'black'}
 
 ax.annotate('Authentication starts', xy=(0, .05), xytext=(-.003, .35), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
-ax.annotate('EV authenticated', xy=(.038, .250), xytext=(.037, .6), bbox=box_style,
+ax.annotate('EV authenticated', xy=(.035, .250), xytext=(.037, .6), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=.3"))
-ax.annotate('3AS informs ARES', xy=(.0405, .250), xytext=(.042, .4), bbox=box_style,
+ax.annotate('3AS informs ARES', xy=(.0375, .250), xytext=(.042, .4), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
-ax.annotate('SCADA accepts connection', xy=(.085, 0), xytext=(.07, .3), bbox=box_style,
+ax.annotate('EV opens connection', xy=(.123, 0), xytext=(.102, .4), bbox=box_style,
             arrowprops=dict(**arrow_style, connectionstyle="arc3,rad=-.3"))
 
 plt.savefig(f'seqOfEvents_{EVS}_{REP}.pdf')
