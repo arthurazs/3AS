@@ -161,8 +161,7 @@ def parse_one(evs, rep, verbose=False):
 
 def parse_all():
     loaded_dataset = pd.DataFrame()
-    # for ev in [1, 10, 300, 1000]:
-    for ev in [1, 10, 25, 50, 100, 150]:
+    for ev in [1, 10, 50, 100, 150]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
             q = parse_one(ev, reps, verbose=False)
@@ -188,10 +187,8 @@ dataset = pd.read_csv('all_experiments_delay.csv')
 print('plotting...')
 sns.set_palette('mako', 5)
 
-query = 'evs != 25'
-dataset.delay = dataset.delay * 1000
 # sns.boxplot(x='evs', y='delay', data=dataset, width=.5)
-sns.boxplot(x='evs', y='delay', data=dataset.query(query), width=.5)
+sns.boxplot(x='evs', y='delay', linewidth=.95, data=dataset, width=.5)
 # sns.jointplot(x=dataset.query(query).evs, kind='hex', y=dataset.query(query).delay)
 plt.ylabel('Delay (ms)')
 plt.xlabel('Number of EVs')

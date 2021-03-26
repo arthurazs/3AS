@@ -103,8 +103,8 @@ def load(evs, rep, verbose=False):
         print('normalized\n')
         print('sampling down...')
         print(authentication.shape)
-    helper = authentication[authentication.Traffic == 'EAPoL'].values[0][-1]
-    aux = authentication.query('time < @helper')
+    helper_type = authentication[authentication.Traffic == 'EAPoL'].values[0][-1]
+    aux = authentication.query('time < @helper_type')
     start = aux[aux.information == 'Type: OFPT_PACKET_IN'].values[-1][-1]
     end = authentication[authentication.Traffic == 'MMS'].values[0][-1]
     partial = normalize_time(
@@ -113,6 +113,8 @@ def load(evs, rep, verbose=False):
         print(f'{start} -> {end}')
         print(partial.shape)
         print('sampled\n')
+    # media por veiculo
+    partial.length = partial.length / evs
 
     # return partial
     # return partial.groupby('Traffic').sum()
@@ -120,9 +122,8 @@ def load(evs, rep, verbose=False):
 
 
 def load_all():
-    dataset = pd.DataFrame()
-    # for ev in [1, 10]:
-    for ev in [1, 10, 300, 1000]:
+    loaded_dataset = pd.DataFrame()
+    for ev in [1, 10, 50, 100, 150]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
             q = load(ev, reps, verbose=False)
@@ -132,8 +133,8 @@ def load_all():
                 aux = pd.DataFrame()
                 aux['length'] = [length]
                 aux['Traffic'] = [name]
-                dataset = dataset.append(aux, ignore_index=True)
-    return dataset
+                loaded_dataset = loaded_dataset.append(aux, ignore_index=True)
+    return loaded_dataset
 
 
 # === CODE ===
@@ -141,25 +142,31 @@ def load_all():
 sns.set_style('whitegrid')
 ax = plt.gca()
 
-dataset = load_all()
-print(dataset.query('Traffic == "OpenFlow"').mean())    # 2.13
-print(dataset.query('Traffic == "API"').mean())         # 0.92
-print(dataset.query('Traffic == "EAPoL"').mean())       # 6.15
-print(dataset.query('Traffic == "RADIUS"').mean())      # 8.21
-print('plotting...')
+# dataset = load_all()
+# dataset.to_csv('all_experiments_load.csv')
+# exit()
+
+print('loading...\n')
+dataset = pd.read_csv('all_experiments_load.csv')
+
+print('Openflow', dataset.query('Traffic == "OpenFlow"').mean()[1])     # 0.96
+print('API', dataset.query('Traffic == "API"').mean()[1])               # 0.46
+print('EAPoL', dataset.query('Traffic == "EAPoL"').mean()[1])           # 3.32
+print('RADIUS', dataset.query('Traffic == "RADIUS"').mean()[1])         # 4.38
+
+print('\nplotting...')
 sns.set_palette('mako', 4)
 
 data_order = ['OpenFlow', 'API', 'EAPoL', 'RADIUS']
-# sns.boxplot(x='Traffic', y='length',
 sns.barplot(x='Traffic', y='length',
             data=dataset,
             errwidth=1, capsize=.1, edgecolor='.2',
             order=data_order)
 plt.ylabel('Control Load (kBytes)')
-plt.ylim(0, 9.5)
+# plt.ylim(0, 9.5)
 # plt.xlabel('Time (s)')
 
-ax.annotate('Authentication', xy=(2, 8.3), xytext=(2, 8.8),
+ax.annotate('Authentication', xy=(2, 4.6), xytext=(2, 4.95),
             ha='center', va='bottom',
             arrowprops=dict(arrowstyle='-[, widthB=7.1, lengthB=0.5', color='black'))
 
