@@ -92,7 +92,6 @@ def load(evs, rep, verbose=False):
     if verbose:
         print('concatenated\n')
         print('setting index...')
-    # authentication.set_index('datetime', inplace=True, verify_integrity=True)
     authentication.set_index('datetime', inplace=True)
     authentication.sort_index(inplace=True)
     if verbose:
@@ -116,8 +115,6 @@ def load(evs, rep, verbose=False):
     # media por veiculo
     partial.length = partial.length / evs
 
-    # return partial
-    # return partial.groupby('Traffic').sum()
     return partial.groupby('Traffic').sum().T
 
 
@@ -126,10 +123,9 @@ def load_all():
     for ev in [1, 10, 50, 100, 150]:
         for reps in range(1, 11):
             print(f'loading {ev}_{reps}...')
-            q = load(ev, reps, verbose=False)
-            # q.reset_index(inplace=True)
-            q = q.loc['length']
-            for name, length in q.items():
+            loaded = load(ev, reps, verbose=False)
+            loaded = loaded.loc['length']
+            for name, length in loaded.items():
                 aux = pd.DataFrame()
                 aux['length'] = [length]
                 aux['Traffic'] = [name]
@@ -142,17 +138,17 @@ def load_all():
 sns.set_style('whitegrid')
 ax = plt.gca()
 
-# dataset = load_all()
-# dataset.to_csv('all_experiments_load.csv')
-# exit()
-
 print('loading...\n')
-dataset = pd.read_csv('all_experiments_load.csv')
+try:
+    dataset = pd.read_csv('all_experiments_load.csv')
+except FileNotFoundError:
+    dataset = load_all()
+    dataset.to_csv('all_experiments_load.csv')
 
-print('Openflow', dataset.query('Traffic == "OpenFlow"').mean()[1])     # 0.96
-print('API', dataset.query('Traffic == "API"').mean()[1])               # 0.46
-print('EAPoL', dataset.query('Traffic == "EAPoL"').mean()[1])           # 3.32
-print('RADIUS', dataset.query('Traffic == "RADIUS"').mean()[1])         # 4.38
+print('Openflow', dataset.query('Traffic == "OpenFlow"').mean())     # 0.96
+print('API', dataset.query('Traffic == "API"').mean())               # 0.46
+print('EAPoL', dataset.query('Traffic == "EAPoL"').mean())           # 3.32
+print('RADIUS', dataset.query('Traffic == "RADIUS"').mean())         # 4.38
 
 print('\nplotting...')
 sns.set_palette('mako', 4)
@@ -163,25 +159,10 @@ sns.barplot(x='Traffic', y='length',
             errwidth=1, capsize=.1, edgecolor='.2',
             order=data_order)
 plt.ylabel('Control Load (kBytes)')
-# plt.ylim(0, 9.5)
-# plt.xlabel('Time (s)')
 
 ax.annotate('Authentication', xy=(2, 4.6), xytext=(2, 4.95),
             ha='center', va='bottom',
             arrowprops=dict(arrowstyle='-[, widthB=7.1, lengthB=0.5', color='black'))
 
-# todo
-# tamanho boxplot
-# - fazer boxplot pro tamanho dos pacotes
-# tempo amostra (regplot?)
-# - colocar só os pontos (amostras, sem as retas)
-# - 'fiz essa sequência de eventos várias vezes e a dispersão fica assim'
-# - pintar os pontos pra simbolizar partes do evento
-# - 'inicio de X, fim de X'
-# tempo boxplot?
-# - olhar quanto tempo leva cada evento
-# - sabe-se a sequência de eventos (tempo total)
-
 plt.savefig(f'controlLoad.pdf')
-# plt.show()
 print('plotted')

@@ -119,7 +119,6 @@ def parse_one(evs, rep, verbose=False):
     if verbose:
         print('concatenated\n')
         print('setting index...')
-    # authentication.set_index('datetime', inplace=True, verify_integrity=True)
     authentication.set_index('datetime', inplace=True)
     authentication.sort_index(inplace=True)
     if verbose:
@@ -131,7 +130,6 @@ def parse_one(evs, rep, verbose=False):
         print('sampling down...')
         print(authentication.shape)
 
-    # this_rep = pd.DataFrame()
     current_ev = 0
     counter = 0
     current_mac = '00:00:00:00:00:03'
@@ -152,8 +150,6 @@ def parse_one(evs, rep, verbose=False):
                'delay': mms_start - openflow_start}
         aux[counter] = row
     this_rep = pd.DataFrame().from_dict(aux, 'index')
-    # TODO media de todos veiculos no experimento + media por experimento?
-    # TODO e se colocar a media separada por veiculo num grafico de pontos e tals
     this_rep.sort_values(by='start', inplace=True)
     this_rep.reset_index(drop=True, inplace=True)
     return this_rep
@@ -179,36 +175,19 @@ def load():
 sns.set_style('whitegrid')
 ax = plt.gca()
 
-# dataset = parse_all()
-# dataset.to_csv('all_experiments_delay.csv')
-# exit()
+try:
+    dataset = pd.read_csv('all_experiments_delay.csv')
+except FileNotFoundError:
+    dataset = parse_all()
+    dataset.to_csv('all_experiments_delay.csv')
+
 print('loading...')
-dataset = pd.read_csv('all_experiments_delay.csv')
 print('plotting...')
 sns.set_palette('mako', 5)
 
-# sns.boxplot(x='evs', y='delay', data=dataset, width=.5)
 sns.boxplot(x='evs', y='delay', linewidth=.95, data=dataset, width=.5)
-# sns.jointplot(x=dataset.query(query).evs, kind='hex', y=dataset.query(query).delay)
 plt.ylabel('Delay (ms)')
 plt.xlabel('Number of EVs')
-# plt.show()
 plt.savefig('timeDelay')
 
-exit()
-
-# todo
-# tamanho boxplot
-# - fazer boxplot pro tamanho dos pacotes
-# tempo amostra (regplot?)
-# - colocar só os pontos (amostras, sem as retas)
-# - 'fiz essa sequência de eventos várias vezes e a dispersão fica assim'
-# - pintar os pontos pra simbolizar partes do evento
-# - 'inicio de X, fim de X'
-# tempo boxplot?
-# - olhar quanto tempo leva cada evento
-# - sabe-se a sequência de eventos (tempo total)
-
-# plt.savefig(f'timeDelay.pdf')
-plt.show()
 print('plotted')

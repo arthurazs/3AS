@@ -71,7 +71,7 @@ Download and unpack it into the 3AS/journal folder and rename it to `dataset`. O
 ```bash
 apt install -y wget p7zip
 cd journal
-wget -O- https://www.dropbox.com/s/4rn550ucu09mcza/dataset.tar.xz?dl=1 | 7z x -si -txz -so | 7z x -si -ttar
+wget -O- https://www.dropbox.com/s/frajo1foprsbpfu/dataset-2021-03-28.tar.xz?dl=1 | 7z x -si -txz -so | 7z x -si -ttar
 ```
 
 To plot the graphs, run:
@@ -83,8 +83,12 @@ pip3 install seaborn
 cd journal
 sh csv.sh
 
-python3 graph.py
+python3 control_load.py
+python3 seq_of_events.py
+python3 time_delay.py
 ```
+
+3 PDF's will be generated, one for each graph.
 
 <!--
 openssl x509 -in client.pem -text

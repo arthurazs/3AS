@@ -37,10 +37,6 @@ def load_csv(name, proto=None):
         '_ws.col.Length': 'length',
         '_ws.col.Info': 'information'})
 
-    # if name == 'sdn-hostapd':
-    #     data_frame.loc[data_frame['protocol'] == 'TCP', 'Traffic'] = 'API'
-    #     data_frame.loc[data_frame['protocol'] == 'HTTP', 'Traffic'] = 'API'
-
     data_frame.length = data_frame.length.apply(lambda x: x / 1000)
 
     return data_frame
@@ -81,56 +77,61 @@ def normalize_time(data_frame):
     return data_set
 
 
+def load_all():
+    print('loading datasets...')
+    radius = load_csv('freeradius', 'Authentication')
+    openflow = load_csv('openflow', 'OpenFlow')
+    scada = load_csv('scada', 'MMS')
+    hostapd = load_csv('sdn-hostapd', 'Authentication')
+    print('loaded\n')
+
+    print('concatenating datasets...')
+    auth_tuple = (radius, openflow, scada, hostapd)
+    authentication = pd.concat(auth_tuple)
+    print('concatenated\n')
+
+    print('setting index...')
+    authentication.set_index('datetime', inplace=True, verify_integrity=True)
+    authentication.sort_index(inplace=True)
+    print('setted\n')
+
+    print('resampling data...')
+    print(authentication.shape)
+    authentication = fix_sample(authentication, 1, 'ms')
+    authentication.sort_index(inplace=True)
+    print(authentication.shape)
+    print('resampled\n')
+
+    print('normalizing date...')
+    authentication = normalize_time(authentication)
+    print('normalized\n')
+
+    print('sampling down...')
+    print(authentication.shape)
+    partial = authentication
+    partial = normalize_time(
+        authentication.query('time > 3 and time < 3.3').drop(columns='time'))
+    print(partial.shape)
+    print('sampled\n')
+    return partial
+
+
 # === CODE ===
 
-print('loading datasets...')
-radius = load_csv('freeradius', 'Authentication')
-openflow = load_csv('openflow', 'OpenFlow')
-scada = load_csv('scada', 'MMS')
-hostapd = load_csv('sdn-hostapd', 'Authentication')
-print('loaded\n')
-
-print('concatenating datasets...')
-auth_tuple = (radius, openflow, scada, hostapd)
-authentication = pd.concat(auth_tuple)
-print('concatenated\n')
-
-print('setting index...')
-authentication.set_index('datetime', inplace=True, verify_integrity=True)
-authentication.sort_index(inplace=True)
-print('setted\n')
-
-print('resampling data...')
-print(authentication.shape)
-authentication = fix_sample(authentication, 1, 'ms')
-authentication.sort_index(inplace=True)
-print(authentication.shape)
-print('resampled\n')
-
-print('normalizing date...')
-authentication = normalize_time(authentication)
-print('normalized\n')
-
-print('sampling down...')
-print(authentication.shape)
-partial = authentication
-partial = normalize_time(
-    # authentication.drop(columns='time'))
-    authentication.query('time > 3 and time < 3.3').drop(columns='time'))
-print(partial.shape)
-print('sampled\n')
-
-# partial.time = partial.time * 1000
+try:
+    dataset = pd.read_csv('all_experiments_seq.csv')
+except FileNotFoundError:
+    dataset = load_all()
+    dataset.to_csv('all_experiments_seq.csv')
 
 print('plotting...')
 sns.set_style('whitegrid')
 
-protocol_list = partial.protocol.unique()
+protocol_list = dataset.protocol.unique()
 protocol_list = protocol_list[
     (protocol_list != 'EAPOL') & (protocol_list != 'RADIUS')]
 
-csv_list = partial.Traffic.unique()
-# csv_list = csv_list[csv_list != 'radius']
+csv_list = dataset.Traffic.unique()
 
 sns.set_palette('mako', len(csv_list))
 
@@ -140,7 +141,7 @@ sns.lineplot(
     style_order=csv_list,
     hue='Traffic',
     hue_order=csv_list,
-    data=partial)
+    data=dataset)
 
 plt.ylabel('Throughput (kBytes/s)')
 plt.xlabel('Time (s)')

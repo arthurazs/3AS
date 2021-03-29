@@ -2,6 +2,7 @@
 *.pcap
 *.log
 journal.7z
+journal/dataset
 
 # python
 *.pyc
