@@ -185,9 +185,13 @@ print('loading...')
 print('plotting...')
 sns.set_palette('mako', 5)
 
+dataset.delay = dataset.delay * 1000
 sns.boxplot(x='evs', y='delay', linewidth=.95, data=dataset, width=.5)
 plt.ylabel('Delay (ms)')
 plt.xlabel('Number of EVs')
 plt.savefig('timeDelay')
 
 print('plotted')
+
+print(dataset.query('evs == 1').mean())
+print(dataset.query('evs == 150').mean())
